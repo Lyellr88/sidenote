@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cli-sidenote"
+version = "1.2.2"
+description = "A zero-friction todo overlay for your terminal. Built for ADHD developers."
+readme = "README.md"
+# 3.7 is the real floor: cli.py uses subprocess.CREATE_NO_WINDOW, added in 3.7.
+requires-python = ">=3.7"
+license = {text = "MIT"}
+keywords = ["terminal", "todo", "adhd", "productivity", "overlay", "cli", "notes"]
+authors = [
+    {name = "CLI Sidenote Contributors"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Utilities",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: Microsoft :: Windows",
+]
+
+dependencies = [
+    "keyboard>=0.13.5",
+    "pywin32>=311",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/Lyellr88/sidenote"
+Repository = "https://github.com/Lyellr88/sidenote"
+Issues = "https://github.com/Lyellr88/sidenote/issues"
+
+[project.scripts]
+sidenote = "cli_sidenote.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cli_sidenote*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
