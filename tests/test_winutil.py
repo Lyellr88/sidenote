@@ -9,7 +9,7 @@ import os
 import pytest
 import win32gui
 
-from cli_sidenote import winutil
+from sidenote import winutil
 
 
 def test_terminal_exe_list_is_lowercase():

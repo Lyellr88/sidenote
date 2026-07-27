@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from cli_sidenote import lockfile
+from sidenote import lockfile
 
 
 @pytest.fixture

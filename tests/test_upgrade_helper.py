@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from cli_sidenote import _upgrade
+from sidenote import _upgrade
 
 
 @pytest.fixture
@@ -59,14 +59,14 @@ def test_pause_survives_missing_stdin(monkeypatch, capsys):
 
 
 def test_helper_module_is_runnable():
-    """It must be importable as `python -m cli_sidenote._upgrade`."""
+    """It must be importable as `python -m sidenote._upgrade`."""
     result = subprocess.run(
-        [sys.executable, "-c", "import cli_sidenote._upgrade as u; print(u.PACKAGE)"],
+        [sys.executable, "-c", "import sidenote._upgrade as u; print(u.PACKAGE)"],
         capture_output=True,
         text=True,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "cli-sidenote"
+    assert result.stdout.strip() == "sidenote"
 
 
 def test_helper_only_imports_stdlib_at_module_level():
@@ -74,4 +74,4 @@ def test_helper_only_imports_stdlib_at_module_level():
     source = __import__("pathlib").Path(_upgrade.__file__).read_text(encoding="utf-8")
     # No imports of our own package - those files are being replaced underneath.
     assert "from . import" not in source
-    assert "import cli_sidenote" not in source
+    assert "import sidenote" not in source

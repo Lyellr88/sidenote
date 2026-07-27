@@ -1,18 +1,17 @@
-# CLI Sidenote
+# Sidenote
 
 > A lightweight, ADHD-friendly todo list that lives right next to your terminal window
 
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![Python](https://img.shields.io/badge/python-3.7+-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-[![PyPI](https://img.shields.io/pypi/v/cli-sidenote)](https://pypi.org/project/cli-sidenote/)
+[![PyPI](https://img.shields.io/pypi/v/sidenote)](https://pypi.org/project/sidenote/)
 
 ## Why This Exists
 
 **The ADHD Problem**: You're coding in your terminal, a task pops into your head, and by the time you open Notepad/Tudo/a new tab, it's gone. That 2-second context switch is enough for ADHD brains to lose the thought entirely.
 
-Every other tool costs you that switch - open an app, run a command, find the
-window. CLI Sidenote is *already there*, docked to your terminal. `Shift+Tab`, type, `Enter`. Three seconds, without ever looking away from what you were doing.
+Every other tool costs you that switch - open an app, run a command, find the window. Sidenote is *already there*, docked to your terminal. `Shift+Tab`, type, `Enter`. Three seconds, without ever looking away from what you were doing.
 
 ### Why not existing tools
 
@@ -42,7 +41,7 @@ This isn't about rich features but simplicity. It's about **zero-friction captur
 ## Install
 
 ```powershell
-pip install cli-sidenote
+pip install sidenote
 sidenote
 sidenote init 
 ```
@@ -53,7 +52,7 @@ Optionally, `sidenote init` adds `start-note` / `stop-note` shortcuts to your
 PowerShell profile.
 
 > If `sidenote` isn't found after installing, your Python Scripts folder isn't on
-> PATH - see [Troubleshooting](https://github.com/lyellr88/cli-sidenote/blob/main/DOCS.md#troubleshooting).
+> PATH - see [Troubleshooting](https://github.com/lyellr88/sidenote/blob/main/DOCS.md#troubleshooting).
 
 ## Usage
 
@@ -97,14 +96,13 @@ Windows 10/11, Python 3.7+, and a terminal (PowerShell, CMD, or Windows Terminal
 
 ## Documentation
 
-**[Full documentation →](https://github.com/lyellr88/cli-sidenote/blob/main/DOCS.md)**
+**[Full documentation →](https://github.com/lyellr88/sidenote/blob/main/DOCS.md)**
 
 FAQ · Troubleshooting · How it works · Data format · Upgrading · Uninstalling · Development
 
 ## Contributing
 
-Happy to take PRs for bug fixes, better terminal detection, performance, or
-cross-platform support. Run `pytest` first, and add a test if you're fixing a bug. See [CONTRIBUTING.md](https://github.com/lyellr88/cli-sidenote/blob/main/CONTRIBUTING.md).
+Happy to take PRs for bug fixes, better terminal detection, performance, or cross-platform support. Run `pytest` first, and add a test if you're fixing a bug. See [CONTRIBUTING.md](https://github.com/lyellr88/sidenote/blob/main/CONTRIBUTING.md).
 
 ## License
 

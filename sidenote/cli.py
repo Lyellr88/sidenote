@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI Sidenote - command line interface.
+Sidenote - command line interface.
 
 Entry point for the ``sidenote`` command: start, stop, status, init.
 """
@@ -43,7 +43,7 @@ def _pythonw():
 
 def _require_windows():
     if sys.platform != "win32":
-        _say("Error: CLI Sidenote currently supports Windows only")
+        _say("Error: Sidenote currently supports Windows only")
         sys.exit(1)
 
 
@@ -58,7 +58,7 @@ def start():
         return
 
     subprocess.Popen(
-        [_pythonw(), "-m", "cli_sidenote", "--show"],
+        [_pythonw(), "-m", "sidenote", "--show"],
         creationflags=subprocess.CREATE_NO_WINDOW,
         close_fds=True,
     )
@@ -109,7 +109,7 @@ def _version():
     try:
         import importlib.metadata as metadata
 
-        return metadata.version("cli-sidenote")
+        return metadata.version("sidenote")
     except Exception:
         try:
             from . import __version__
@@ -130,7 +130,7 @@ def _installed_version():
             [
                 sys.executable,
                 "-c",
-                "import importlib.metadata as m; print(m.version('cli-sidenote'))",
+                "import importlib.metadata as m; print(m.version('sidenote'))",
             ],
             capture_output=True,
             text=True,
@@ -150,7 +150,7 @@ def _is_editable_install():
     try:
         import importlib.metadata as metadata
 
-        raw = metadata.distribution("cli-sidenote").read_text("direct_url.json")
+        raw = metadata.distribution("sidenote").read_text("direct_url.json")
         if not raw:
             return False
         import json
@@ -189,23 +189,28 @@ def upgrade():
 
     try:
         subprocess.Popen(
-            [sys.executable, "-m", "cli_sidenote._upgrade", str(os.getpid())],
+            [sys.executable, "-m", "sidenote._upgrade", str(os.getpid())],
             creationflags=subprocess.CREATE_NEW_CONSOLE,
             close_fds=True,
         )
     except OSError as exc:
         _say(f"✗ Could not start the upgrade helper: {exc}")
-        _say("  Run this instead: python -m pip install --upgrade cli-sidenote")
+        _say("  Run this instead: python -m pip install --upgrade sidenote")
         sys.exit(1)
 
     _say("")
     _say("The upgrade continues in a separate window - this one can close.")
 
 
-PROFILE_BLOCK = """
-# CLI Sidenote
-function start-note { sidenote }
-function stop-note  { sidenote stop }
+PROFILE_MARKER = "# Sidenote"
+# Profiles written before the rename carry the old marker. Detection has to
+# recognise both, or `init` appends a second block to an existing profile.
+LEGACY_PROFILE_MARKER = "# CLI Sidenote"
+
+PROFILE_BLOCK = f"""
+{PROFILE_MARKER}
+function start-note {{ sidenote }}
+function stop-note  {{ sidenote stop }}
 """
 
 
@@ -232,7 +237,7 @@ def init():
 
     content = profile_path.read_text(encoding="utf-8", errors="replace")
 
-    if "# CLI Sidenote" in content:
+    if PROFILE_MARKER in content or LEGACY_PROFILE_MARKER in content:
         if "Set-Alias -Name stop-note" in content:
             _say("! Your profile has the old broken aliases in it:")
             _say("    Set-Alias -Name stop-note -Value sidenote")
@@ -256,8 +261,8 @@ def init():
     _say("  stop-note   # same as 'sidenote stop'")
 
 
-TAGLINE = "CLI Sidenote - a zero-friction todo overlay for your terminal"
-DOCS_URL = "https://github.com/lyellr88/cli-sidenote"
+TAGLINE = "Sidenote - a zero-friction todo overlay for your terminal"
+DOCS_URL = "https://github.com/lyellr88/sidenote"
 
 # Single source of truth: the help listing, argparse's `choices`, and the
 # dispatch table are all derived from this, so they cannot drift apart.
@@ -333,16 +338,17 @@ def main():
         add_help=False,
     )
     parser.add_argument(
-        "command", nargs="?", choices=[name for name, _ in COMMANDS], help=argparse.SUPPRESS
+        "command",
+        nargs="?",
+        choices=[name for name, _ in COMMANDS],
+        help=argparse.SUPPRESS,
     )
-    parser.add_argument(
-        "-h", "--help", action="store_true", help=argparse.SUPPRESS
-    )
+    parser.add_argument("-h", "--help", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "-V",
         "--version",
         action="version",
-        version=f"cli-sidenote {_version()}",
+        version=f"sidenote {_version()}",
         help=argparse.SUPPRESS,
     )
     parser.format_help = _format_help

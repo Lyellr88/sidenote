@@ -1,28 +1,29 @@
-# cli-sidenote - Agent Instructions
+# Sidenote - Agent Instructions
 
 Instructions for AI coding agents working on this repo. Keep changes minimal and focused.
 
 ## Architecture
 
-CLI Sidenote is a Python-based terminal overlay for Windows: a todo list that attaches to your terminal window.
+Sidenote is a Python-based terminal overlay for Windows: a todo list that attaches to your terminal window.
 
 **Core Files:**
-- `cli_sidenote/terminal_overlay.py` - tkinter UI, positioning, and event handling
-- `cli_sidenote/winutil.py` - Terminal detection, DPI handling, Win32 event hooks
-- `cli_sidenote/storage.py` - Load / migrate / atomically save todos
-- `cli_sidenote/lockfile.py` - PID-based single-instance lock
-- `cli_sidenote/cli.py` - Entry point for `sidenote` (start/stop/status/upgrade/init)
-- `cli_sidenote/_upgrade.py` - Detached helper process for `sidenote upgrade`
-- `cli_sidenote/__main__.py` - Enables `pythonw -m cli_sidenote`
-- `cli_sidenote/__init__.py` - Package metadata
+
+- `sidenote/terminal_overlay.py` - tkinter UI, positioning, and event handling
+- `sidenote/winutil.py` - Terminal detection, DPI handling, Win32 event hooks
+- `sidenote/storage.py` - Load / migrate / atomically save todos
+- `sidenote/lockfile.py` - PID-based single-instance lock
+- `sidenote/cli.py` - Entry point for `sidenote` (start/stop/status/upgrade/init)
+- `sidenote/_upgrade.py` - Detached helper process for `sidenote upgrade`
+- `sidenote/__main__.py` - Enables `pythonw -m sidenote`
+- `sidenote/__init__.py` - Package metadata
 - `pyproject.toml` - Package configuration for PyPI
 - `tests/` - pytest suite
 - `setup.ps1` - Local setup script (for cloned repo use)
 
-There is exactly one copy of the application code, inside `cli_sidenote/`. A
-duplicate `terminal_overlay.py` used to sit at the repo root; do not reintroduce it.
+There is exactly one copy of the application code, inside `sidenote/`. A duplicate `terminal_overlay.py` used to sit at the repo root; do not reintroduce it.
 
 **Key Features:**
+
 - Terminal window detection (PowerShell, CMD, Windows Terminal)
 - Right-side positioning that follows terminal movement
 - Z-order synchronization (todo comes forward when terminal gets focus)
@@ -35,79 +36,63 @@ duplicate `terminal_overlay.py` used to sit at the repo root; do not reintroduce
 ## Code Patterns
 
 **Threading (read this before touching the UI):**
-tkinter is not thread-safe. The Win32 hook thread and the `keyboard` hotkey
-thread must never touch a widget. Both call `TerminalOverlay._post(fn)`, which queues the callable; the main thread drains it in `_pump()` via `after()`. Calling `root.withdraw()` or `.config()` from a background thread causes intermittent hangs and crashes - this was a real bug, not a theoretical one.
+tkinter is not thread-safe. The Win32 hook thread and the `keyboard` hotkey thread must never touch a widget. Both call `TerminalOverlay._post(fn)`, which queues the callable; the main thread drains it in `_pump()` via `after()`. Calling `root.withdraw()` or `.config()` from a background thread causes intermittent hangs and crashes - this was a real bug, not a theoretical one.
 
 **Window Detection:**
-`winutil.is_terminal()` resolves each hwnd to its owning executable via
-`GetWindowThreadProcessId` + `QueryFullProcessImageNameW` and matches against
-`winutil.TERMINAL_EXES`. Do not match on window titles: a browser tab named
-"PowerShell docs" passes a title check. Cloaked (hidden UWP) windows are excluded.
+`winutil.is_terminal()` resolves each hwnd to its owning executable via `GetWindowThreadProcessId` + `QueryFullProcessImageNameW` and matches against `winutil.TERMINAL_EXES`. Do not match on window titles: a browser tab named "PowerShell docs" passes a title check. Cloaked (hidden UWP) windows are excluded.
 
 **Z-Order Sync:**
 On `EVENT_SYSTEM_FOREGROUND` for the terminal, `winutil.bring_to_front()` flashes `HWND_TOPMOST` → `HWND_NOTOPMOST` with `SWP_NOACTIVATE`, raising the overlay without permanent always-on-top behaviour and without stealing keyboard focus.
 
 **Movement Detection:**
-Event-driven via `SetWinEventHook` (`MOVESIZESTART/END`, `LOCATIONCHANGE`,
-`MINIMIZESTART/END`, `DESTROY`) on a dedicated thread with its own message pump. A 2-second fallback poll only covers terminals opening and closing. Do not reintroduce a tight position-polling loop.
+Event-driven via `SetWinEventHook` (`MOVESIZESTART/END`, `LOCATIONCHANGE`, `MINIMIZESTART/END`, `DESTROY`) on a dedicated thread with its own message pump. A 2-second fallback poll only covers terminals opening and closing. Do not reintroduce a tight position-polling loop.
 
 **Positioning:**
-Uses DWM extended frame bounds (`winutil.visible_rect`), not `GetWindowRect`,
-which includes an invisible ~8px resize border. Chrome height is measured via
-`winutil.window_metrics`, never hardcoded - a hardcoded 31px title bar broke on scaled displays.
+Uses DWM extended frame bounds (`winutil.visible_rect`), not `GetWindowRect`, which includes an invisible ~8px resize border. Chrome height is measured via `winutil.window_metrics`, never hardcoded - a hardcoded 31px title bar broke on scaled displays.
 
 **Storage:**
-`{"version": 2, "todos": [{"text", "created", "done"}]}` at `~/.terminal_todos.json`. Saves are atomic (temp file + `os.replace`). Legacy
-1.0.x string lists (`"[14:23] Fix bug"`) are migrated on load; keep that path working. `storage.save()` returns an error string rather than raising or
-swallowing - surface it in the status bar.
+`{"version": 2, "todos": [{"text", "created", "done"}]}` at `~/.terminal_todos.json`. Saves are atomic (temp file + `os.replace`). Legacy 1.0.x string lists (`"[14:23] Fix bug"`) are migrated on load; keep that path working. `storage.save()` returns an error string rather than raising or swallowing - surface it in the status bar.
 
 **Process Management:**
-Never kill by image name. `taskkill /F /IM python.exe` killed every Python
-process on the user's machine. Terminate only the PID in `~/.terminal_overlay.lock`, and validate it is both alive and a Python process before trusting it (`lockfile.is_overlay_pid`).
+Never kill by image name. `taskkill /F /IM python.exe` killed every Python process on the user's machine. Terminate only the PID in `~/.terminal_overlay.lock`, and validate it is both alive and a Python process before trusting it (`lockfile.is_overlay_pid`).
 
 **Console Output:**
 Route CLI prints through `cli._say()`. Bare `print("✓")` raises `UnicodeEncodeError` under cp1252, still the default in cmd.exe.
 
 **Self-Upgrade:**
-`cli.upgrade()` must never run pip in-process. Windows locks a running `.exe`
-against overwrite *and* rename (verified: `WinError 32` for both), so pip cannot replace `Scripts/sidenote.exe` while `sidenote upgrade` is the running process. `cli_sidenote/_upgrade.py` is spawned with `CREATE_NEW_CONSOLE`, waits on the parent PID via `WaitForSingleObject`, and only then runs pip. That helper may import stdlib only, all at module level - pip is rewriting this package's files while it runs, so a lazy import could load a half-written module. Editable installs are refused, since upgrading them from PyPI would replace the user's working copy.
+`cli.upgrade()` must never run pip in-process. Windows locks a running `.exe` against overwrite *and* rename (verified: `WinError 32` for both), so pip cannot replace `Scripts/sidenote.exe` while `sidenote upgrade` is the running process. `sidenote/_upgrade.py` is spawned with `CREATE_NEW_CONSOLE`, waits on the parent PID via `WaitForSingleObject`, and only then runs pip. That helper may import stdlib only, all at module level - pip is rewriting this package's files while it runs, so a lazy import could load a half-written module. Editable installs are refused, since upgrading them from PyPI would replace the user's working copy.
 
 ## Consistency Rules
 
 **When changing the package version, update:**
+
 1. `pyproject.toml` - `version` field
-2. `cli_sidenote/__init__.py` - `__version__`
+2. `sidenote/__init__.py` - `__version__`
 3. `README.md` - Title if major version changes
 
 `test_source_version_matches_pyproject` fails if 1 and 2 drift apart. Published versions are immutable on PyPI, so any change after a release needs a new number. `cli._version()` reads installed metadata first and falls back to `__version__` for source checkouts that were never pip-installed.
 
 **Documentation split:**
-`README.md` is the short front page and is what PyPI renders - keep it lean.
-Everything else (FAQ, troubleshooting, internals, upgrade/uninstall detail, dev
-setup) lives in `DOCS.md`. Links from `README.md` to other repo files **must be
-absolute GitHub URLs**: relative links resolve against pypi.org and 404 there.
+`README.md` is the short front page and is what PyPI renders - keep it lean. Everything else (FAQ, troubleshooting, internals, upgrade/uninstall detail, dev setup) lives in `DOCS.md`. Links from `README.md` to other repo files **must be absolute GitHub URLs**: relative links resolve against pypi.org and 404 there.
 
 **When adding new commands, update:**
-1. `cli_sidenote/cli.py` - add the handler, an entry in the `COMMANDS` list, and
-   a key in `main()`'s `dispatch` dict
+
+1. `sidenote/cli.py` - add the handler, an entry in the `COMMANDS` list, and a key in `main()`'s `dispatch` dict
 2. `README.md` - Commands table
 3. `DOCS.md` - If it needs more than one line of explanation
 4. `tests/test_cli.py` - Cover the new behaviour
 5. Test the command after `pip install -e .`
 
-`COMMANDS` is the single source of truth: the `--help` listing and argparse's
-`choices` are both derived from it, and `test_command_list_matches_dispatch`
-fails if an entry has no dispatch handler. Help output is hand-rolled in
-`_format_help()` because argparse renders a `choices` positional as a cramped
-`{a,b,c}` blob with one shared description. Keep every label shorter than
-`_GUTTER` and every line under 80 columns - both are enforced by tests.
+`COMMANDS` is the single source of truth: the `--help` listing and argparse's `choices` are both derived from it, and `test_command_list_matches_dispatch` fails if an entry has no dispatch handler. Help output is hand-rolled in `_format_help()` because argparse renders a `choices` positional as a cramped `{a,b,c}` blob with one shared description. Keep every label shorter than `_GUTTER` and every line under 80 columns - both are enforced by tests.
 
 **When adding new keybindings, update:**
-1. `cli_sidenote/terminal_overlay.py` - the binding *and* the `HELP_ROWS` table that populates the `?` panel
+
+1. `sidenote/terminal_overlay.py` - the binding *and* the `HELP_ROWS` table that populates the `?` panel
 2. `README.md` - Hotkeys table
 3. The manual checklist above
 
 **When changing the storage format:**
+
 1. Bump `storage.SCHEMA_VERSION`
 2. Keep the existing migration path working - users have live data
 3. Add a migration test to `tests/test_storage.py`
@@ -121,9 +106,8 @@ pip install -e ".[dev]"
 pytest
 ```
 
-`tests/` covers storage migration and atomic saves, lock-file liveness and
-PID-reuse handling, window-detection invariants, and CLI behaviour. Several tests are explicit regression guards - `test_terminate_kills_only_the_target`,
-`test_stale_lock_is_cleared_not_honoured`, `test_init_writes_functions_not_aliases`
+`tests/` covers storage migration and atomic saves, lock-file liveness and PID-reuse handling, window-detection invariants, and CLI behaviour. Several tests are explicit regression guards - `test_terminate_kills_only_the_target`, `test_stale_lock_is_cleared_not_honoured`, `test_init_writes_functions_not_aliases`
+
 - so if you change that behaviour, understand the bug being guarded first.
 
 Tests that spawn real processes or enumerate live windows assert on invariants, not on specific machines. Keep them that way.
@@ -138,6 +122,7 @@ sidenote init    # Test init
 ```
 
 Manual checklist:
+
 - ✅ Overlay appears flush against the terminal, no gap, matching height
 - ✅ Follows terminal when moved, snapped, and maximised
 - ✅ Comes forward when clicking terminal, without stealing keyboard focus
@@ -148,16 +133,6 @@ Manual checklist:
 - ✅ Lock button works, and survives the locked terminal being closed
 - ✅ Commands work from any directory
 - ✅ Correct on a scaled (150%/200% DPI) display
-
-## Publishing to PyPI
-
-```powershell
-# Bump version in pyproject.toml and __init__.py first
-python -m build
-twine upload dist/*
-```
-
-Use a project-scoped PyPI token, not full account access.
 
 ## Workflow
 

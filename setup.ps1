@@ -1,12 +1,12 @@
-# CLI Sidenote - setup for a cloned repo.
+# Sidenote - setup for a cloned repo.
 #
 # Installs the package (which pulls its own dependencies from pyproject.toml)
 # and adds the PowerShell helper functions. If you installed from PyPI with
-# `pip install cli-sidenote`, you don't need this script at all - just run
+# `pip install sidenote`, you don't need this script at all - just run
 # `sidenote init`.
 
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "   CLI Sidenote - Setup" -ForegroundColor Cyan
+Write-Host "   Sidenote - Setup" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -26,7 +26,7 @@ Write-Host "  Python found: $pythonVersion" -ForegroundColor Green
 # Install the package. Dependencies come from pyproject.toml, so there is only
 # one place where versions are declared.
 Write-Host ""
-Write-Host "[2/3] Installing cli-sidenote and dependencies..." -ForegroundColor Yellow
+Write-Host "[2/3] Installing sidenote and dependencies..." -ForegroundColor Yellow
 Push-Location $scriptDir
 try {
     python -m pip install -e .

@@ -1,4 +1,4 @@
 include README.md
 include DOCS.md
 include LICENSE
-recursive-include cli_sidenote *.py
+recursive-include sidenote *.py

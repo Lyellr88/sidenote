@@ -5,7 +5,7 @@ from datetime import datetime
 
 import pytest
 
-from cli_sidenote import storage
+from sidenote import storage
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-"""Allow ``pythonw -m cli_sidenote`` to launch the overlay directly."""
+"""Allow ``pythonw -m sidenote`` to launch the overlay directly."""
 
 import sys
 

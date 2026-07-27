@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from cli_sidenote import cli, lockfile
+from sidenote import cli, lockfile
 
 
 @pytest.fixture
@@ -120,7 +120,7 @@ def test_start_launches_the_package_module(isolated_lock, monkeypatch):
     cmd = launched[0]
     # -m keeps a single source of truth; the old code shelled out to a
     # duplicated terminal_overlay.py sitting at the repo root.
-    assert cmd[1:] == ["-m", "cli_sidenote", "--show"]
+    assert cmd[1:] == ["-m", "sidenote", "--show"]
 
 
 # -------------------------------------------------------------------- help
@@ -230,7 +230,7 @@ def test_unknown_command_is_rejected(monkeypatch, capsys):
 def test_version_matches_package_metadata():
     import importlib.metadata as metadata
 
-    assert cli._version() == metadata.version("cli-sidenote")
+    assert cli._version() == metadata.version("sidenote")
 
 
 def test_version_falls_back_when_metadata_missing(monkeypatch):
@@ -242,9 +242,9 @@ def test_version_falls_back_when_metadata_missing(monkeypatch):
 
     monkeypatch.setattr(metadata, "version", boom)
 
-    import cli_sidenote
+    import sidenote
 
-    assert cli._version() == cli_sidenote.__version__
+    assert cli._version() == sidenote.__version__
 
 
 def test_version_is_a_flag_not_a_subcommand(monkeypatch, capsys):
@@ -295,7 +295,7 @@ def test_source_version_matches_pyproject():
     """
     tomllib = pytest.importorskip("tomllib")
 
-    import cli_sidenote
+    import sidenote
 
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
     if not pyproject.exists():
@@ -304,7 +304,7 @@ def test_source_version_matches_pyproject():
     with open(pyproject, "rb") as handle:
         declared = tomllib.load(handle)["project"]["version"]
 
-    assert cli_sidenote.__version__ == declared
+    assert sidenote.__version__ == declared
 
 
 # ----------------------------------------------------------------- upgrade
@@ -329,7 +329,7 @@ def test_upgrade_hands_off_to_detached_helper(isolated_lock, monkeypatch, capsys
 
     assert len(launched) == 1, "expected exactly one helper process"
     cmd, kwargs = launched[0]
-    assert cmd[1:3] == ["-m", "cli_sidenote._upgrade"]
+    assert cmd[1:3] == ["-m", "sidenote._upgrade"]
     # The helper needs our PID so it can wait for us to exit.
     assert cmd[3] == str(os.getpid())
     assert kwargs["creationflags"] == cli.subprocess.CREATE_NEW_CONSOLE
@@ -450,6 +450,23 @@ def test_init_flags_the_old_broken_alias_block(tmp_path, monkeypatch, capsys):
 
     assert excinfo.value.code == 1
     assert "old broken aliases" in capsys.readouterr().out.lower()
+
+
+def test_init_recognises_the_pre_rename_marker(tmp_path, monkeypatch, capsys):
+    """Profiles written before the cli-sidenote -> sidenote rename must not
+    get a second block appended."""
+    profile = _profile(tmp_path, monkeypatch)
+    profile.write_text(
+        "\n# CLI Sidenote\nfunction start-note { sidenote }\n"
+        "function stop-note  { sidenote stop }\n",
+        encoding="utf-8",
+    )
+    before = profile.read_text(encoding="utf-8")
+
+    cli.init()
+
+    assert profile.read_text(encoding="utf-8") == before
+    assert "already configured" in capsys.readouterr().out.lower()
 
 
 def test_init_preserves_existing_profile_content(tmp_path, monkeypatch):

@@ -1,12 +1,12 @@
-# Contributing to CLI Sidenote
+# Contributing to Sidenote
 
 Thanks for considering contributing! This is a small personal-use tool built for ADHD developers, but PRs are welcome.
 
 ## Quick Start
 
 ```powershell
-git clone https://github.com/lyellr88/cli-sidenote.git
-cd cli-sidenote
+git clone https://github.com/lyellr88/sidenote.git
+cd sidenote
 
 # Install in editable mode, with test dependencies
 pip install -e ".[dev]"
@@ -21,10 +21,10 @@ sidenote
 ## Project Structure
 
 ```
-cli-sidenote/
-  cli_sidenote/
+sidenote/
+  sidenote/
     __init__.py           # Package metadata
-    __main__.py           # Enables `pythonw -m cli_sidenote`
+    __main__.py           # Enables `pythonw -m sidenote`
     cli.py                # Command entry point (start/stop/status/upgrade/init)
     _upgrade.py           # Detached helper for `sidenote upgrade`
     terminal_overlay.py   # tkinter UI, positioning, event handling
@@ -38,8 +38,7 @@ cli-sidenote/
   setup.ps1               # Setup for cloned repos
 ```
 
-`AGENTS.md` documents the invariants that are easy to break by accident -
-threading rules, why detection is process-based, and why nothing may be killed by image name. Worth reading before a non-trivial change.
+`AGENTS.md` documents the invariants that are easy to break by accident - threading rules, why detection is process-based, and why nothing may be killed by image name. Worth reading before a non-trivial change.
 
 ## Making Changes
 
@@ -95,7 +94,7 @@ Before submitting a PR:
 ## Publishing (Maintainers Only)
 
 ```powershell
-# Bump version in pyproject.toml and cli_sidenote/__init__.py
+# Bump version in pyproject.toml and sidenote/__init__.py
 pytest              # must be green before publishing
 python -m build
 twine upload dist/*

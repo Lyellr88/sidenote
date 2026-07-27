@@ -19,7 +19,7 @@ import sys
 import time
 from ctypes import wintypes
 
-PACKAGE = "cli-sidenote"
+PACKAGE = "sidenote"
 SYNCHRONIZE = 0x00100000
 WAIT_OBJECT_0 = 0
 
@@ -50,7 +50,7 @@ def _wait_for_exit(pid, timeout_ms=30000):
 def main():
     parent_pid = int(sys.argv[1]) if len(sys.argv) > 1 else 0
 
-    print("CLI Sidenote - upgrade")
+    print("Sidenote - upgrade")
     print("=" * 40)
     print()
 
