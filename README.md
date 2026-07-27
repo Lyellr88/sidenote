@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 [![PyPI](https://img.shields.io/pypi/v/sidenote)](https://pypi.org/project/sidenote/)
 
-<video src="https://github.com/user-attachments/assets/f506c214-92fc-4827-bcfa-19c170bb75f4 controls autoplay loop muted width="100%"></video>
+<https://github.com/user-attachments/assets/f506c214-92fc-4827-bcfa-19c170bb75f4>
 
 ## Why This Exists
 
