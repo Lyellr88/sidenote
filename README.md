@@ -7,6 +7,8 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 [![PyPI](https://img.shields.io/pypi/v/sidenote)](https://pypi.org/project/sidenote/)
 
+<video src="https://github.com/user-attachments/assets/f506c214-92fc-4827-bcfa-19c170bb75f4 controls autoplay loop muted width="100%"></video>
+
 ## Why This Exists
 
 **The ADHD Problem**: You're coding in your terminal, a task pops into your head, and by the time you open Notepad/Tudo/a new tab, it's gone. That 2-second context switch is enough for ADHD brains to lose the thought entirely.
