@@ -24,6 +24,7 @@ share/python-wheels/
 MANIFEST
 .claude
 .claudeignore
+dump.md
 
 # Virtual environments
 venv/
@@ -69,3 +70,6 @@ twine.ini
 *.bak
 *.swp
 *~
+
+# Local demo recording, served from GitHub user-attachments in the README
+assets/

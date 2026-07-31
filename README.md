@@ -31,9 +31,11 @@ This isn't about rich features but simplicity. It's about **zero-friction captur
 | **Terminal Integration** | Attaches flush to your terminal window, pixel-aligned |
 | **Smart Z-Order Sync** | When you click the terminal, todo comes forward with it |
 | **Movement Following** | Hides while you drag the terminal, snaps back when you stop |
+| **Resizable Width** | Drag it wider for longer notes; it stays that width as the terminal moves |
 | **Check Things Off** | Double-click a todo to complete it, don't just delete it |
 | **Persistent Storage** | Todos saved atomically, survive reboots and crashes |
 | **Global Hotkey** | `Shift+Tab` toggles from anywhere |
+| **Copy a Todo** | Right-click a todo to copy its text, with a quick flash to confirm |
 | **Lock to Terminal** | Lock button (🔓/🔒) to stick to a specific terminal |
 | **Built-in Help** | `?` button lists every action, no need to memorise anything |
 | **Timestamps** | Each todo gets a timestamp when added |
@@ -60,7 +62,9 @@ PowerShell profile.
 
 **Add** - type in the box, press `Enter`. Timestamped automatically.
 **Check off** - double-click a todo. It greys out and shows `[x]`. Double-click again to uncheck.
+**Copy** - right-click a todo to put its text on the clipboard. It flashes to confirm.
 **Remove** - select it and press `Delete`.
+**Resize** - drag the edge to widen it for longer notes; the width sticks until you restart.
 
 The `?` button in the top-left lists every action, so there's nothing to memorise.
 
@@ -71,6 +75,7 @@ The `?` button in the top-left lists every action, so there's nothing to memoris
 | `Shift+Tab` | Toggle overlay (works from any app) |
 | `Enter` | Add todo |
 | `Double-click` | Check off / uncheck |
+| `Right-click` | Copy a todo's text |
 | `Space` | Check off / uncheck the selected todo |
 | `Delete` / `Backspace` | Remove selected todo |
 | `Ctrl+Delete` | Clear all checked-off todos |

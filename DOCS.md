@@ -37,7 +37,9 @@ No. The only network access in the entire package is `sidenote upgrade`, which c
 
 **Can I resize the overlay?**
 
-Not directly - it's a fixed width (280px, scaled for your display's DPI) and matches your terminal's height automatically. You can drag it away from the terminal by its title bar to place it manually; the lock button re-attaches it.
+Yes - drag its edge. It opens at 280px (scaled for your display's DPI), and a width you set by dragging is kept from then on, including when the terminal moves or resizes. The width resets to the default next time you start it.
+
+Height isn't adjustable: it tracks your terminal's height so the two stay flush. You can also drag the overlay away from the terminal by its title bar to place it manually; the lock button re-attaches it.
 
 **Why does it vanish while I drag the terminal?**
 
@@ -70,7 +72,9 @@ python -c "import site; print(site.USER_BASE + '\\Scripts')"
 Then add it to your user PATH:
 
 ```powershell
-$scripts = python -c "import site; print(site.USER_BASE + '\\Scripts')" $user = [Environment]::GetEnvironmentVariable('PATH','User') [Environment]::SetEnvironmentVariable('PATH', "$user;$scripts", 'User')
+$scripts = python -c "import site; print(site.USER_BASE + '\\Scripts')"
+$user = [Environment]::GetEnvironmentVariable('PATH','User')
+[Environment]::SetEnvironmentVariable('PATH', "$user;$scripts", 'User')
 ```
 
 Close and reopen your terminal afterwards.
@@ -121,7 +125,7 @@ The overlay uses Windows API calls to:
 1. **Detect terminals** - Identifies windows by the *executable* behind them (`WindowsTerminal.exe`, `powershell.exe`, `pwsh.exe`, `cmd.exe`, ...) rather than by window title, so a browser tab named "PowerShell docs" isn't mistaken for a terminal. DWM-cloaked windows are excluded.
 2. **Position itself** - Aligns flush to the right edge using DWM's extended frame bounds. `GetWindowRect` includes Windows' invisible ~8px resize border, which would leave a visible gap. Window chrome is measured at runtime, so it's correct at any DPI.
 3. **Sync z-order** - When the terminal takes focus, briefly flashes topmost with `SWP_NOACTIVATE` to bring the overlay forward, without becoming permanently always-on-top and without stealing your keyboard focus.
-4. **Follow movement** - Subscribes to `SetWinEventHook` for move/resize/minimise/destroy events instead of polling, so it reacts instantly and costs nothing while idle.
+4. **Follow movement** - Subscribes to `SetWinEventHook` for move/resize/minimise/destroy events instead of polling, so it reacts instantly and costs nothing while idle. Repositioning keeps a width you set by dragging, and only recomputes the default one.
 5. **Persist data** - Saves to `~/.terminal_todos.json` with an atomic write-and-rename, so an interrupted save can't corrupt the file.
 
 **Threading note:** tkinter is not thread-safe. Window events arrive on a Win32 hook thread and the hotkey arrives on the `keyboard` library's thread; both hand work to the main thread through a queue rather than touching widgets directly.

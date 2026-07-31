@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sidenote"
-version = "1.0.1"
+version = "1.1.2"
 description = "A zero-friction todo overlay for your terminal. Built for ADHD developers."
 readme = "README.md"
 # 3.7 is the real floor: cli.py uses subprocess.CREATE_NO_WINDOW, added in 3.7.

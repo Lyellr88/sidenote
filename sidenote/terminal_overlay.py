@@ -20,6 +20,8 @@ from .lockfile import SingleInstance
 BG = "#1e1e1e"
 BAR_BG = "#2d2d30"
 LIST_BG = "#252526"
+# Just enough lift off LIST_BG to locate the selection without it grabbing the eye.
+SELECT_BG = "#2f3033"
 FG = "#cccccc"
 MUTED = "#858585"
 DONE_FG = "#6a6a6a"
@@ -31,10 +33,15 @@ PUMP_MS = 40
 FALLBACK_POLL_MS = 2000
 REPOSITION_DEBOUNCE_MS = 60
 
+# Steps a copied row fades through on its way back to normal.
+COPY_FLASH = ["#4ec9b0", "#3f9c88", "#317a6c"]
+COPY_FLASH_MS = 70
+
 HELP_ROWS = [
     ("Shift+Tab", "Toggle overlay (works anywhere)"),
     ("Enter", "Add todo"),
     ("Double-click", "Check off / uncheck a todo"),
+    ("Right-click", "Copy a todo's text"),
     ("Space", "Check off / uncheck selection"),
     ("Delete", "Remove selected todo"),
     ("Ctrl+Delete", "Clear all checked-off todos"),
@@ -63,6 +70,8 @@ class TerminalOverlay:
         self._help_window = None
         self._lock_tooltip = None
         self._scale = 1.0
+        self._user_width = None
+        self._applied_w = None
 
         self.setup_window()
         self.setup_ui()
@@ -75,11 +84,12 @@ class TerminalOverlay:
     # ------------------------------------------------------------------ setup
 
     def setup_window(self):
-        self.root.title("Quick Todos")
+        self.root.title("")
         self.root.geometry(f"{BASE_WIDTH}x600+100+100")
         self.root.configure(bg=BG)
         self.root.withdraw()
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.root.bind("<Configure>", self._on_configure)
 
     def setup_ui(self):
         drag_bar = tk.Frame(self.root, bg=BAR_BG, height=25, cursor="fleur")
@@ -98,10 +108,6 @@ class TerminalOverlay:
         self.help_btn.pack(side=tk.LEFT)
         self.help_btn.bind("<Button-1>", lambda e: self.toggle_help())
 
-        tk.Label(
-            drag_bar, text="Quick Todos", fg=FG, bg=BAR_BG, font=("Consolas", 9)
-        ).pack(side=tk.LEFT, padx=4, pady=5)
-
         self.lock_btn = tk.Label(
             drag_bar,
             text="\U0001f513",
@@ -117,8 +123,21 @@ class TerminalOverlay:
         self.lock_btn.bind("<Enter>", self.show_lock_tooltip)
         self.lock_btn.bind("<Leave>", self.hide_lock_tooltip)
 
-        drag_bar.bind("<Button-1>", self.start_drag)
-        drag_bar.bind("<B1-Motion>", self.on_drag)
+        # place(), not pack(): the two buttons are different widths, so packing
+        # the title into what's left between them centres it off-centre.
+        title = tk.Label(
+            drag_bar,
+            text="Sidenote",
+            fg=FG,
+            bg=BAR_BG,
+            font=("Consolas", 9),
+            cursor="fleur",
+        )
+        title.place(relx=0.5, rely=0.5, anchor="center")
+
+        for widget in (drag_bar, title):
+            widget.bind("<Button-1>", self.start_drag)
+            widget.bind("<B1-Motion>", self.on_drag)
 
         input_frame = tk.Frame(self.root, bg=BG)
         input_frame.pack(fill=tk.X, padx=8, pady=8)
@@ -139,23 +158,28 @@ class TerminalOverlay:
         list_container = tk.Frame(self.root, bg=BG)
         list_container.pack(fill=tk.BOTH, expand=True, padx=8, pady=0)
 
-        scrollbar = tk.Scrollbar(list_container, bg=BAR_BG)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
+        # No scrollbar: the list still scrolls by wheel, and by arrow keys once
+        # a row is selected.
         self.listbox = tk.Listbox(
             list_container,
             bg=LIST_BG,
             fg=FG,
-            selectbackground="#094771",
+            selectbackground=SELECT_BG,
+            # Empty means "keep the row's own colour", so selecting a done todo
+            # doesn't wash out its grey, and the copy flash still shows.
+            selectforeground="",
             relief="flat",
             font=("Consolas", 9),
             bd=0,
-            yscrollcommand=scrollbar.set,
+            # Default is a 1px SystemButtonFace ring, which reads as a white
+            # border whenever the list doesn't have focus.
+            highlightthickness=0,
             activestyle="none",
         )
-        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=self.listbox.yview)
+        self.listbox.pack(fill=tk.BOTH, expand=True)
 
+        self.listbox.bind("<MouseWheel>", self._on_mousewheel)
+        self.listbox.bind("<Button-3>", self.copy_todo)
         self.listbox.bind("<Double-Button-1>", self.toggle_done)
         self.listbox.bind("<space>", self.toggle_done)
         self.listbox.bind("<Delete>", self.remove_todo)
@@ -333,16 +357,34 @@ class TerminalOverlay:
 
         # Scale to the terminal's monitor instead of assuming 96 DPI.
         self._apply_scaling(winutil.dpi_for_window(terminal))
-        width = int(BASE_WIDTH * self._scale)
 
         # tk sizes the client area and positions the *window* rect, so subtract
         # this window's chrome and shift by its invisible border to make the
-        # visible edges sit flush against the terminal.
-        client_w = max(120, width - chrome_w)
+        # visible edges sit flush against the terminal. A width the user dragged
+        # is already a client width, so it needs no such adjustment.
+        if self._user_width:
+            client_w = max(120, self._user_width)
+        else:
+            client_w = max(120, int(BASE_WIDTH * self._scale) - chrome_w)
         client_h = max(120, (term_bottom - term_top) - chrome_h)
         self.root.geometry(
             f"{client_w}x{client_h}+{term_right - offset_x}+{term_top - offset_y}"
         )
+        self._applied_w = client_w
+
+    def _on_configure(self, event):
+        """Remember a width the user set by dragging the window edge.
+
+        Every terminal event re-runs position_next_to_terminal, which would
+        otherwise snap a widened overlay straight back to BASE_WIDTH. Widths we
+        applied ourselves are recorded in _applied_w, so anything that differs
+        came from the user.
+        """
+        if event.widget is not self.root or self._applied_w is None:
+            return
+        if event.width != self._applied_w:
+            self._user_width = event.width
+            self._applied_w = event.width
 
     def _apply_scaling(self, dpi):
         scale = dpi / 96.0
@@ -483,6 +525,49 @@ class TerminalOverlay:
 
     # ------------------------------------------------------------------ todos
 
+    def _on_mousewheel(self, event):
+        self.listbox.yview_scroll(-int(event.delta / 120), "units")
+        return "break"
+
+    def copy_todo(self, event=None):
+        index = self._selected_index(event)
+        if index is None:
+            return "break"
+        try:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(self.todos[index].get("text", ""))
+        except tk.TclError as exc:
+            self.set_status(f"Copy failed: {exc}", error=True)
+            return "break"
+        self.set_status("Copied")
+        self._flash_row(index)
+        return "break"
+
+    def _flash_row(self, index):
+        """Fade the copied row back to its normal colour.
+
+        Stepping through a few shades reads as an acknowledgement; a single
+        on/off blink at this size just looks like a rendering glitch.
+        """
+
+        def step(i):
+            if index >= len(self.todos) or index >= self.listbox.size():
+                return
+            if i < len(COPY_FLASH):
+                colour = COPY_FLASH[i]
+            else:
+                colour = DONE_FG if self.todos[index].get("done") else FG
+            try:
+                # selectforeground too, or the flash is invisible on the
+                # selected row: Tk draws that one with the select colour.
+                self.listbox.itemconfig(index, fg=colour, selectforeground=colour)
+            except tk.TclError:
+                return
+            if i < len(COPY_FLASH):
+                self.root.after(COPY_FLASH_MS, lambda: step(i + 1))
+
+        step(0)
+
     def add_todo(self, event=None):
         text = self.entry.get().strip()
         if not text:
@@ -529,7 +614,7 @@ class TerminalOverlay:
 
     def _selected_index(self, event=None):
         """Index under the pointer for mouse events, else the selected row."""
-        if event is not None and getattr(event, "num", None) == 1:
+        if event is not None and getattr(event, "num", None) in (1, 3):
             index = self.listbox.nearest(event.y)
             if index < 0 or index >= len(self.todos):
                 return None
@@ -551,7 +636,7 @@ class TerminalOverlay:
         for i, todo in enumerate(self.todos):
             self.listbox.insert(tk.END, storage.display(todo))
             if todo.get("done"):
-                self.listbox.itemconfig(i, fg=DONE_FG)
+                self.listbox.itemconfig(i, fg=DONE_FG, selectforeground=DONE_FG)
         self.update_counts()
 
     def update_counts(self):

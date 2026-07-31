@@ -34,6 +34,7 @@ sidenote/
   tests/                  # pytest suite
   pyproject.toml          # Package config
   README.md               # User guide
+  DOCS.md                 # FAQ, troubleshooting, internals
   AGENTS.md               # Architecture notes and invariants
   setup.ps1               # Setup for cloned repos
 ```
@@ -69,6 +70,8 @@ Before submitting a PR:
 - ✅ Overlay sits flush against the terminal, matching its height
 - ✅ `Shift+Tab` toggles visibility
 - ✅ Double-click checks a todo off; `Ctrl+Delete` clears completed ones
+- ✅ Right-click copies a todo, including one that's selected; the list scrolls by wheel and arrow keys
+- ✅ A width set by dragging the edge survives the terminal being moved or resized
 - ✅ `?` panel lists the actions and closes again
 - ✅ Todos persist after closing/reopening
 - ✅ Lock button (🔓/🔒) works
@@ -96,7 +99,13 @@ Before submitting a PR:
 ```powershell
 # Bump version in pyproject.toml and sidenote/__init__.py
 pytest              # must be green before publishing
+
+# Clear dist/ first. Bumping the version does not rebuild, so a leftover
+# artifact gets uploaded instead - or collides with its published twin and
+# fails the whole command.
+Remove-Item -Recurse -Force dist, build, *.egg-info -ErrorAction SilentlyContinue
 python -m build
+twine check dist/*
 twine upload dist/*
 ```
 

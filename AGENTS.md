@@ -29,6 +29,8 @@ There is exactly one copy of the application code, inside `sidenote/`. A duplica
 - Z-order synchronization (todo comes forward when terminal gets focus)
 - Global hotkey (`Shift+Tab`) to toggle visibility
 - Check todos off (double-click / `Space`); `Ctrl+Delete` clears completed
+- Right-click a todo to copy its text, acknowledged by a colour fade
+- Width is user-resizable by dragging; height stays matched to the terminal
 - `?` button showing all quick actions
 - Lock button to stick to one specific terminal
 - Persistent storage at `~/.terminal_todos.json`
@@ -49,6 +51,11 @@ Event-driven via `SetWinEventHook` (`MOVESIZESTART/END`, `LOCATIONCHANGE`, `MINI
 
 **Positioning:**
 Uses DWM extended frame bounds (`winutil.visible_rect`), not `GetWindowRect`, which includes an invisible ~8px resize border. Chrome height is measured via `winutil.window_metrics`, never hardcoded - a hardcoded 31px title bar broke on scaled displays.
+
+`position_next_to_terminal()` runs on every terminal event, so it must not recompute width unconditionally - that snapped a user-resized overlay back to `BASE_WIDTH` within milliseconds. `_on_configure` records any width that differs from the one we applied (`_applied_w`) as `_user_width`, and positioning honours it. A user width is already a client width, so it must not have `chrome_w` subtracted a second time.
+
+**Listbox Colours:**
+Tk draws the *selected* row with `selectforeground`, ignoring per-item `fg`. Any per-item colour must set both, or it silently does nothing while the row is highlighted - this hid the copy flash and made completed todos look incomplete when selected. Note that `itemcget(i, "fg")` echoes what you set, not what is rendered, so it cannot confirm this.
 
 **Storage:**
 `{"version": 2, "todos": [{"text", "created", "done"}]}` at `~/.terminal_todos.json`. Saves are atomic (temp file + `os.replace`). Legacy 1.0.x string lists (`"[14:23] Fix bug"`) are migrated on load; keep that path working. `storage.save()` returns an error string rather than raising or swallowing - surface it in the status bar.
@@ -128,6 +135,10 @@ Manual checklist:
 - ✅ Comes forward when clicking terminal, without stealing keyboard focus
 - ✅ `Shift+Tab` toggles visibility
 - ✅ Double-click checks a todo off; `Ctrl+Delete` clears completed ones
+- ✅ Right-click copies a todo and flashes it; the row returns to its normal colour
+- ✅ The flash is visible on a row that is currently selected, not just unselected ones
+- ✅ Dragging the edge wider survives clicking the terminal, moving it, and resizing it
+- ✅ The list scrolls by wheel and by arrow keys, with no scrollbar visible
 - ✅ `?` panel opens, closes, and stays on screen at the right screen edge
 - ✅ Todos persist after restart, and a 1.0.x file migrates cleanly
 - ✅ Lock button works, and survives the locked terminal being closed

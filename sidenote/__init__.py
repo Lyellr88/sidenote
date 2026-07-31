@@ -3,5 +3,5 @@ Sidenote - A zero-friction todo overlay for your terminal
 Built for ADHD developers who need to catch thoughts before they vanish.
 """
 
-__version__ = "1.0.1"
+__version__ = "1.1.2"
 __author__ = "Sidenote Contributors"
