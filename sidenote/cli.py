@@ -285,6 +285,7 @@ HOTKEYS = [
     ("Double-click", "Check off / uncheck a todo"),
     ("Delete", "Remove the selected todo"),
     ("Ctrl+Delete", "Clear all checked-off todos"),
+    ("Ctrl+Z", "Undo the last delete"),
 ]
 
 EXAMPLES = [

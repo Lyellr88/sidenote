@@ -27,6 +27,8 @@ MUTED = "#858585"
 DONE_FG = "#6a6a6a"
 ERROR_FG = "#f48771"
 LOCKED_BG = "#8b0000"
+# Marks the entry field while it's naming/renaming a tab instead of adding a todo.
+ACCENT = "#60a5fa"
 
 BASE_WIDTH = 280
 PUMP_MS = 40
@@ -42,9 +44,13 @@ HELP_ROWS = [
     ("Enter", "Add todo"),
     ("Double-click", "Check off / uncheck a todo"),
     ("Right-click", "Copy a todo's text"),
+    ("Drag a todo", "Reorder it in the list"),
     ("Space", "Check off / uncheck selection"),
     ("Delete", "Remove selected todo"),
     ("Ctrl+Delete", "Clear all checked-off todos"),
+    ("Ctrl+Z", "Undo the last delete"),
+    ("+ button", "Add a tab (up to 5)"),
+    ("Double-click tab name", "Rename the current tab"),
     ("Escape", "Hide overlay"),
     ("Lock button", "Stick to one specific terminal"),
     ("Drag title bar", "Detach and place it yourself"),
@@ -55,7 +61,9 @@ class TerminalOverlay:
     def __init__(self):
         self.root = tk.Tk()
         self.visible = False
-        self.todos = []
+        self.tabs = [storage.new_tab()]
+        self.active_tab = 0
+        self.todos = self.tabs[0]["todos"]
         self.locked_terminal = None
         self.is_locked = False
         self.follow_terminal = True
@@ -72,6 +80,10 @@ class TerminalOverlay:
         self._scale = 1.0
         self._user_width = None
         self._applied_w = None
+        # "todo" | "new_tab" | "rename_tab" - what Enter in the entry field does.
+        self._entry_mode = "todo"
+        self._undo_stack = []
+        self._drag_from = None
 
         self.setup_window()
         self.setup_ui()
@@ -96,18 +108,24 @@ class TerminalOverlay:
         drag_bar.pack(fill=tk.X)
         drag_bar.pack_propagate(False)
 
-        self.help_btn = tk.Label(
+        self.add_tab_btn = tk.Label(
             drag_bar,
-            text="?",
+            text="+",
             bg=BAR_BG,
             fg=FG,
             cursor="hand2",
             font=("Consolas", 10, "bold"),
             padx=6,
         )
-        self.help_btn.pack(side=tk.LEFT)
-        self.help_btn.bind("<Button-1>", lambda e: self.toggle_help())
+        self.add_tab_btn.pack(side=tk.LEFT)
+        self.add_tab_btn.bind("<Button-1>", lambda e: self.start_new_tab())
 
+        # Populated by _render_tabs() once a second tab exists.
+        self.tabs_frame = tk.Frame(drag_bar, bg=BAR_BG)
+        self.tabs_frame.pack(side=tk.LEFT)
+
+        # Packed right-to-left: lock lands at the far edge, help lands just
+        # left of it.
         self.lock_btn = tk.Label(
             drag_bar,
             text="\U0001f513",
@@ -123,8 +141,20 @@ class TerminalOverlay:
         self.lock_btn.bind("<Enter>", self.show_lock_tooltip)
         self.lock_btn.bind("<Leave>", self.hide_lock_tooltip)
 
-        # place(), not pack(): the two buttons are different widths, so packing
-        # the title into what's left between them centres it off-centre.
+        self.help_btn = tk.Label(
+            drag_bar,
+            text="?",
+            bg=BAR_BG,
+            fg=FG,
+            cursor="hand2",
+            font=("Consolas", 10, "bold"),
+            padx=6,
+        )
+        self.help_btn.pack(side=tk.RIGHT)
+        self.help_btn.bind("<Button-1>", lambda e: self.toggle_help())
+
+        # place(), not pack(): the buttons on either side are different widths,
+        # so packing the title into what's left between them centres it off-centre.
         title = tk.Label(
             drag_bar,
             text="Sidenote",
@@ -150,10 +180,11 @@ class TerminalOverlay:
             relief="flat",
             font=("Consolas", 10),
             bd=5,
+            highlightthickness=0,
         )
         self.entry.pack(fill=tk.X)
-        self.entry.bind("<Return>", self.add_todo)
-        self.entry.bind("<Escape>", lambda e: self.hide())
+        self.entry.bind("<Return>", self._on_entry_return)
+        self.entry.bind("<Escape>", self._on_entry_escape)
 
         list_container = tk.Frame(self.root, bg=BG)
         list_container.pack(fill=tk.BOTH, expand=True, padx=8, pady=0)
@@ -187,14 +218,36 @@ class TerminalOverlay:
         self.listbox.bind("<Control-Delete>", self.clear_done)
         self.listbox.bind("<Escape>", lambda e: self.hide())
 
+        # Drag-to-reorder: press records the row, motion moves it live, release
+        # persists it. These run alongside (not instead of) the Listbox's own
+        # click-to-select and double-click-to-toggle handling.
+        self.listbox.bind("<Button-1>", self._on_list_press)
+        self.listbox.bind("<B1-Motion>", self._on_list_drag)
+        self.listbox.bind("<ButtonRelease-1>", self._on_list_release)
+
+        self.root.bind_all("<Control-z>", self.undo)
+
         footer = tk.Frame(self.root, bg=BAR_BG, height=30)
         footer.pack(fill=tk.X)
         footer.pack_propagate(False)
 
-        self.status = tk.Label(
-            footer, text="", fg=MUTED, bg=BAR_BG, font=("Consolas", 8), anchor="center"
+        self.tab_label = tk.Label(
+            footer,
+            text="",
+            fg=MUTED,
+            bg=BAR_BG,
+            font=("Consolas", 8),
+            anchor="w",
+            cursor="hand2",
+            padx=8,
         )
-        self.status.pack(fill=tk.X, pady=6)
+        self.tab_label.pack(side=tk.LEFT, fill=tk.Y)
+        self.tab_label.bind("<Double-Button-1>", lambda e: self.start_rename_tab())
+
+        self.status = tk.Label(
+            footer, text="", fg=MUTED, bg=BAR_BG, font=("Consolas", 8), anchor="e", padx=8
+        )
+        self.status.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.drag_start_x = 0
         self.drag_start_y = 0
@@ -410,7 +463,6 @@ class TerminalOverlay:
     def toggle_lock(self):
         if self.is_locked:
             self._release_lock()
-            self.set_status("Unlocked")
             return
 
         terminal = winutil.find_terminal(self.own_pid)
@@ -423,7 +475,6 @@ class TerminalOverlay:
         self.follow_terminal = True
         self.lock_btn.config(text="\U0001f512", bg=LOCKED_BG)
         self.position_next_to_terminal()
-        self.set_status("Locked to this terminal")
 
     def _release_lock(self):
         self.is_locked = False
@@ -523,6 +574,97 @@ class TerminalOverlay:
             self._help_window.destroy()
             self._help_window = None
 
+    # -------------------------------------------------------------------- tabs
+
+    def start_new_tab(self):
+        if len(self.tabs) >= storage.MAX_TABS:
+            self.set_status(f"Max {storage.MAX_TABS} tabs", error=True)
+            return
+        self._entry_mode = "new_tab"
+        self._prime_entry(f"Tab {len(self.tabs) + 1}")
+        self.set_status("Name the tab, Enter to create")
+
+    def start_rename_tab(self):
+        self._entry_mode = "rename_tab"
+        self._prime_entry(self.tabs[self.active_tab]["name"])
+        self.set_status("Rename tab, Enter to save")
+
+    def _prime_entry(self, text):
+        """Load the entry field for a naming step and flag it visually."""
+        self.entry.delete(0, tk.END)
+        self.entry.insert(0, text)
+        self.entry.select_range(0, tk.END)
+        self.entry.icursor(tk.END)
+        self.entry.config(highlightthickness=2, highlightbackground=ACCENT, highlightcolor=ACCENT)
+        self.entry.focus_set()
+
+    def _leave_entry_mode(self):
+        self._entry_mode = "todo"
+        self.entry.delete(0, tk.END)
+        self.entry.config(highlightthickness=0)
+
+    def _on_entry_return(self, event=None):
+        if self._entry_mode == "new_tab":
+            self._commit_new_tab()
+        elif self._entry_mode == "rename_tab":
+            self._commit_rename_tab()
+        else:
+            self.add_todo()
+
+    def _on_entry_escape(self, event=None):
+        if self._entry_mode != "todo":
+            self._leave_entry_mode()
+            self.update_counts()
+        else:
+            self.hide()
+
+    def _commit_new_tab(self):
+        name = self.entry.get().strip() or f"Tab {len(self.tabs) + 1}"
+        self.tabs.append(storage.new_tab(name))
+        self._leave_entry_mode()
+        self._switch_tab(len(self.tabs) - 1)
+        self.save_todos()
+
+    def _commit_rename_tab(self):
+        name = self.entry.get().strip()
+        if name:
+            self.tabs[self.active_tab]["name"] = name
+            self.save_todos()
+        self._leave_entry_mode()
+        self._update_tab_label()
+
+    def _switch_tab(self, index):
+        self.active_tab = index
+        self.todos = self.tabs[index]["todos"]
+        self.refresh_list()
+        self._update_tab_label()
+        self._render_tabs()
+
+    def _update_tab_label(self):
+        self.tab_label.config(text=self.tabs[self.active_tab]["name"])
+
+    def _render_tabs(self):
+        """Numbered switcher buttons, shown only once a second tab exists."""
+        for child in self.tabs_frame.winfo_children():
+            child.destroy()
+        if len(self.tabs) <= 1:
+            return
+        for i in range(len(self.tabs)):
+            active = i == self.active_tab
+            btn = tk.Label(
+                self.tabs_frame,
+                text=str(i + 1),
+                bg=SELECT_BG if active else BAR_BG,
+                fg=FG if active else MUTED,
+                cursor="hand2",
+                # Tight padding: at 5 tabs this row sits right next to the
+                # centred title, and any wider risks overlapping it.
+                font=("Consolas", 8, "bold" if active else "normal"),
+                padx=2,
+            )
+            btn.pack(side=tk.LEFT)
+            btn.bind("<Button-1>", lambda e, idx=i: self._switch_tab(idx))
+
     # ------------------------------------------------------------------ todos
 
     def _on_mousewheel(self, event):
@@ -593,6 +735,7 @@ class TerminalOverlay:
         index = self._selected_index(event)
         if index is None:
             return "break"
+        self._push_undo()
         del self.todos[index]
         self.refresh_list()
         if self.todos:
@@ -606,11 +749,55 @@ class TerminalOverlay:
         if not removed:
             self.set_status("Nothing checked off yet")
             return "break"
-        self.todos = remaining
+        self._push_undo()
+        # Slice-assign, not rebind: self.todos is the same list object as
+        # self.tabs[self.active_tab]["todos"], and a plain `self.todos = ...`
+        # would break that alias.
+        self.todos[:] = remaining
         self.refresh_list()
         self.save_todos()
         self.set_status(f"Cleared {removed} done")
         return "break"
+
+    def _push_undo(self, limit=10):
+        """Snapshot the active tab's list before a destructive change."""
+        snapshot = [dict(t) for t in self.todos]
+        self._undo_stack.append((self.active_tab, snapshot))
+        del self._undo_stack[:-limit]
+
+    def undo(self, event=None):
+        if not self._undo_stack:
+            self.set_status("Nothing to undo")
+            return "break"
+        tab_index, snapshot = self._undo_stack.pop()
+        self.tabs[tab_index]["todos"][:] = snapshot
+        if tab_index == self.active_tab:
+            self.refresh_list()
+        self.save_todos()
+        self.set_status("Restored")
+        return "break"
+
+    def _on_list_press(self, event):
+        index = self.listbox.nearest(event.y)
+        self._drag_from = index if 0 <= index < len(self.todos) else None
+
+    def _on_list_drag(self, event):
+        if self._drag_from is None:
+            return
+        target = self.listbox.nearest(event.y)
+        if target < 0 or target >= len(self.todos) or target == self._drag_from:
+            return
+        item = self.todos.pop(self._drag_from)
+        self.todos.insert(target, item)
+        self.refresh_list()
+        self.listbox.selection_set(target)
+        self.listbox.activate(target)
+        self._drag_from = target
+
+    def _on_list_release(self, event):
+        if self._drag_from is not None:
+            self.save_todos()
+        self._drag_from = None
 
     def _selected_index(self, event=None):
         """Index under the pointer for mouse events, else the selected row."""
@@ -651,7 +838,7 @@ class TerminalOverlay:
         self.status.config(text=message, fg=ERROR_FG if error else MUTED)
 
     def save_todos(self):
-        error = storage.save(self.todos)
+        error = storage.save(self.tabs, self.active_tab)
         if error:
             # Previously swallowed: a full or read-only disk meant todos stopped
             # persisting with no sign of it until a restart lost them.
@@ -660,8 +847,11 @@ class TerminalOverlay:
             self.update_counts()
 
     def load_todos(self):
-        self.todos, error = storage.load()
+        self.tabs, self.active_tab, error = storage.load()
+        self.todos = self.tabs[self.active_tab]["todos"]
         self.refresh_list()
+        self._update_tab_label()
+        self._render_tabs()
         if error:
             self.set_status(error, error=True)
 

@@ -30,6 +30,9 @@ There is exactly one copy of the application code, inside `sidenote/`. A duplica
 - Global hotkey (`Shift+Tab`) to toggle visibility
 - Check todos off (double-click / `Space`); `Ctrl+Delete` clears completed
 - Right-click a todo to copy its text, acknowledged by a colour fade
+- Drag a todo to reorder it within its tab
+- Up to 5 tabs, each a separate todo list, added/renamed/switched from the header and footer
+- `Ctrl+Z` undoes the last delete (single or `Ctrl+Delete` batch), per tab
 - Width is user-resizable by dragging; height stays matched to the terminal
 - `?` button showing all quick actions
 - Lock button to stick to one specific terminal
@@ -57,8 +60,16 @@ Uses DWM extended frame bounds (`winutil.visible_rect`), not `GetWindowRect`, wh
 **Listbox Colours:**
 Tk draws the *selected* row with `selectforeground`, ignoring per-item `fg`. Any per-item colour must set both, or it silently does nothing while the row is highlighted - this hid the copy flash and made completed todos look incomplete when selected. Note that `itemcget(i, "fg")` echoes what you set, not what is rendered, so it cannot confirm this.
 
+**Tabs and the `self.todos` alias:**
+`self.todos` is not a copy - it *is* `self.tabs[self.active_tab]["todos"]`, the same list object. Every mutation (`add_todo`, `remove_todo`, drag-reorder, undo) uses in-place operations (`.append`, `del ...[i]`, `[:]  = ...`, `.pop`/`.insert`) so the alias stays valid without an explicit sync step. A plain `self.todos = new_list` rebind breaks it silently - `clear_done` had this bug during development; it must slice-assign (`self.todos[:] = remaining`). `_switch_tab` is the only place allowed to rebind, since it's deliberately pointing at a different tab's list.
+
+`storage.MAX_TABS` (5) exists because the tab-switcher buttons live in the header next to the centred "Sidenote" title - past 5 tabs the button row can reach far enough right to overlap the title on the default 280px width. Widening this cap means re-measuring that overlap (see `_render_tabs`'s tight `padx=2`), not just bumping the constant.
+
+**Entry field modes:**
+The single entry field is reused for three things - `self._entry_mode` is `"todo"`, `"new_tab"`, or `"rename_tab"`, and `_on_entry_return`/`_on_entry_escape` dispatch on it. `start_new_tab()`/`start_rename_tab()` prime the field (pre-filled text, selected, a blue `ACCENT` focus ring) and `_leave_entry_mode()` always clears both the mode and the ring - a naming step left half-finished must not leak into a later plain todo add.
+
 **Storage:**
-`{"version": 2, "todos": [{"text", "created", "done"}]}` at `~/.terminal_todos.json`. Saves are atomic (temp file + `os.replace`). Legacy 1.0.x string lists (`"[14:23] Fix bug"`) are migrated on load; keep that path working. `storage.save()` returns an error string rather than raising or swallowing - surface it in the status bar.
+`{"version": 3, "active_tab": int, "tabs": [{"name", "todos": [{"text", "created", "done"}]}]}` at `~/.terminal_todos.json`. Saves are atomic (temp file + `os.replace`). Pre-tabs files (a flat `todos` list, schema 2, or 1.0.x's flat list of `"[14:23] Fix bug"` strings) are migrated into a single tab on load; keep that path working. `storage.load()` never returns an empty tab list, so callers can always index `tabs[active_tab]`. `storage.save()` returns an error string rather than raising or swallowing - surface it in the status bar.
 
 **Process Management:**
 Never kill by image name. `taskkill /F /IM python.exe` killed every Python process on the user's machine. Terminate only the PID in `~/.terminal_overlay.lock`, and validate it is both alive and a Python process before trusting it (`lockfile.is_overlay_pid`).
@@ -137,10 +148,15 @@ Manual checklist:
 - ✅ Double-click checks a todo off; `Ctrl+Delete` clears completed ones
 - ✅ Right-click copies a todo and flashes it; the row returns to its normal colour
 - ✅ The flash is visible on a row that is currently selected, not just unselected ones
+- ✅ Dragging a todo up or down moves it, and the new order survives a restart
 - ✅ Dragging the edge wider survives clicking the terminal, moving it, and resizing it
 - ✅ The list scrolls by wheel and by arrow keys, with no scrollbar visible
 - ✅ `?` panel opens, closes, and stays on screen at the right screen edge
-- ✅ Todos persist after restart, and a 1.0.x file migrates cleanly
+- ✅ `+` adds a tab, capped at 5; the entry field switches to naming mode and back
+- ✅ Double-clicking the footer tab name renames it; `Escape` cancels a name in progress
+- ✅ The numbered tab buttons switch lists, and don't overlap the "Sidenote" title at 5 tabs
+- ✅ `Ctrl+Delete` then `Ctrl+Z` restores the cleared todos; a single delete then `Ctrl+Z` restores that one
+- ✅ Todos persist after restart, and a 1.0.x or pre-tabs (schema 2) file migrates cleanly
 - ✅ Lock button works, and survives the locked terminal being closed
 - ✅ Commands work from any directory
 - ✅ Correct on a scaled (150%/200% DPI) display

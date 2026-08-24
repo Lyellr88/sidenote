@@ -3,9 +3,11 @@
 Todo persistence.
 
 Records are dicts - ``{"text", "created", "done"}`` - not bare strings, so that
-completion state (and anything added later) has somewhere to live. Files written
-by 1.0.x were a flat list of ``"[14:23] do the thing"`` strings and are migrated
-on load.
+completion state (and anything added later) has somewhere to live. Todos live
+inside named tabs - ``{"name", "todos"}`` - so the overlay can hold several
+separate lists. Files written by 1.0.x were a flat list of
+``"[14:23] do the thing"`` strings, and 1.x/2.x files were a flat todo list
+with no tabs; both are migrated into a single tab on load.
 """
 
 import json
@@ -17,7 +19,9 @@ from pathlib import Path
 
 DATA_FILE = Path(os.path.expanduser("~")) / ".terminal_todos.json"
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+MAX_TABS = 5
+DEFAULT_TAB_NAME = "Tab 1"
 _LEGACY_PREFIX = re.compile(r"^\[(\d{1,2}):(\d{2})\]\s*(.*)$", re.DOTALL)
 
 
@@ -35,6 +39,10 @@ def new_todo(text, done=False, created=_UNSET):
         "created": created,
         "done": bool(done),
     }
+
+
+def new_tab(name=None, todos=None):
+    return {"name": name or DEFAULT_TAB_NAME, "todos": todos if todos is not None else []}
 
 
 def display(todo):
@@ -94,40 +102,63 @@ def _migrate_legacy(raw, fallback_date):
 
 
 def load(path=DATA_FILE):
-    """Return (todos, error_message). A missing file is not an error."""
+    """Return (tabs, active_tab, error_message). A missing file is not an error.
+
+    ``tabs`` is never empty - callers can always index ``tabs[active_tab]``
+    without checking.
+    """
     path = Path(path)
     if not path.exists():
-        return [], None
+        return [new_tab()], 0, None
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         # Keep the unreadable file around instead of silently starting empty and
         # overwriting it on the next save.
-        return [], f"Could not read todos: {exc}"
+        return [new_tab()], 0, f"Could not read todos: {exc}"
 
     try:
         mtime = datetime.fromtimestamp(path.stat().st_mtime)
     except OSError:
         mtime = datetime.now()
 
+    if isinstance(raw, dict) and "tabs" in raw:
+        tabs = [
+            new_tab(entry.get("name"), _migrate_legacy(entry.get("todos", []), mtime))
+            for entry in raw.get("tabs", [])
+            if isinstance(entry, dict)
+        ]
+        if not tabs:
+            return [new_tab()], 0, None
+        active = raw.get("active_tab", 0)
+        if not isinstance(active, int) or not (0 <= active < len(tabs)):
+            active = 0
+        return tabs, active, None
+
+    # Pre-tabs file: a flat todo list (2.x), or a flat legacy string list
+    # (1.0.x) - either way it becomes the one tab.
     if isinstance(raw, dict):
         items = raw.get("todos", [])
     elif isinstance(raw, list):
         items = raw
     else:
-        return [], "Todo file has an unexpected shape; starting empty."
+        return [new_tab()], 0, "Todo file has an unexpected shape; starting empty."
 
-    return _migrate_legacy(items, mtime), None
+    return [new_tab(todos=_migrate_legacy(items, mtime))], 0, None
 
 
-def save(todos, path=DATA_FILE):
+def save(tabs, active_tab=0, path=DATA_FILE):
     """Write atomically. Returns an error message, or None on success.
 
     Writing to a temp file in the same directory and then os.replace means a
     crash mid-write can't leave a truncated todo list behind.
     """
     path = Path(path)
-    payload = {"version": SCHEMA_VERSION, "todos": todos}
+    payload = {
+        "version": SCHEMA_VERSION,
+        "active_tab": active_tab,
+        "tabs": [{"name": t["name"], "todos": t["todos"]} for t in tabs],
+    }
     tmp_name = None
     try:
         path.parent.mkdir(parents=True, exist_ok=True)

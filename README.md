@@ -33,6 +33,9 @@ This isn't about rich features but simplicity. It's about **zero-friction captur
 | **Movement Following** | Hides while you drag the terminal, snaps back when you stop |
 | **Resizable Width** | Drag it wider for longer notes; it stays that width as the terminal moves |
 | **Check Things Off** | Double-click a todo to complete it, don't just delete it |
+| **Reorder Todos** | Drag one up or down to move it |
+| **Tabs** | Up to 5 separate lists, named and switched from the header |
+| **Undo Delete** | `Ctrl+Z` brings back the last todo (or batch) you deleted |
 | **Persistent Storage** | Todos saved atomically, survive reboots and crashes |
 | **Global Hotkey** | `Shift+Tab` toggles from anywhere |
 | **Copy a Todo** | Right-click a todo to copy its text, with a quick flash to confirm |
@@ -46,8 +49,8 @@ This isn't about rich features but simplicity. It's about **zero-friction captur
 
 ```powershell
 pip install sidenote
-sidenote
-sidenote init 
+sidenote init
+sidenote  
 ```
 
 That's it - `Shift+Tab` toggles it from anywhere.
@@ -63,24 +66,32 @@ PowerShell profile.
 **Add** - type in the box, press `Enter`. Timestamped automatically.
 **Check off** - double-click a todo. It greys out and shows `[x]`. Double-click again to uncheck.
 **Copy** - right-click a todo to put its text on the clipboard. It flashes to confirm.
+**Reorder** - press and drag a todo up or down.
 **Remove** - select it and press `Delete`.
+**Undo a delete** - `Ctrl+Z` brings back the last todo (or `Ctrl+Delete` batch) you removed.
 **Resize** - drag the edge to widen it for longer notes; the width sticks until you restart.
+**Add a tab** - click `+` in the top-left, type a name, press `Enter`. Up to 5.
+**Switch tabs** - click a numbered tab button next to `+`.
+**Rename a tab** - double-click its name in the footer, type a new one, press `Enter`.
 
-The `?` button in the top-left lists every action, so there's nothing to memorise.
+The `?` button lists every action, so there's nothing to memorise.
 
 ### Hotkeys
 
 | Key | Action |
 |-----|--------|
 | `Shift+Tab` | Toggle overlay (works from any app) |
-| `Enter` | Add todo |
+| `Enter` | Add todo (or save a tab name while naming one) |
 | `Double-click` | Check off / uncheck |
 | `Right-click` | Copy a todo's text |
+| `Drag a todo` | Reorder it in the list |
 | `Space` | Check off / uncheck the selected todo |
 | `Delete` / `Backspace` | Remove selected todo |
 | `Ctrl+Delete` | Clear all checked-off todos |
-| `Escape` | Hide overlay |
+| `Ctrl+Z` | Undo the last delete |
+| `Escape` | Hide overlay (or cancel naming a tab) |
 | 🔓 / 🔒 | Pin to one specific terminal |
+| `+` | Add a tab (up to 5) |
 
 ### Commands
 

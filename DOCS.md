@@ -41,6 +41,18 @@ Yes - drag its edge. It opens at 280px (scaled for your display's DPI), and a wi
 
 Height isn't adjustable: it tracks your terminal's height so the two stay flush. You can also drag the overlay away from the terminal by its title bar to place it manually; the lock button re-attaches it.
 
+**Can I have more than one list?**
+
+Yes - up to 5 tabs. Click `+` in the top-left to add one; the entry field switches to naming mode, so type a name and press `Enter`. Switch tabs with the numbered buttons that appear next to `+`, and double-click a tab's name in the footer to rename it.
+
+**Can I reorder my todos?**
+
+Yes - press and drag a todo up or down in the list to move it.
+
+**I deleted a todo by accident. Can I get it back?**
+
+Press `Ctrl+Z`. It restores the list to how it looked before your last delete (a single one or a `Ctrl+Delete` clear), on whichever tab it happened on.
+
 **Why does it vanish while I drag the terminal?**
 
 Deliberate. Repositioning it on every frame of a drag looks broken, so it hides on `MOVESIZESTART` and reappears, correctly placed, on `MOVESIZEEND`.
@@ -147,19 +159,25 @@ The overlay uses Windows API calls to:
 
 ## Data Storage
 
-Todos live in `~/.terminal_todos.json`:
+Todos live in `~/.terminal_todos.json`, grouped into tabs:
 
 ```json
 {
-  "version": 2,
-  "todos": [
-    { "text": "Fix the login bug",    "created": "2026-07-27T14:23:00", "done": true  },
-    { "text": "Update documentation", "created": "2026-07-27T14:25:00", "done": false }
+  "version": 3,
+  "active_tab": 0,
+  "tabs": [
+    {
+      "name": "Tab 1",
+      "todos": [
+        { "text": "Fix the login bug",    "created": "2026-07-27T14:23:00", "done": true  },
+        { "text": "Update documentation", "created": "2026-07-27T14:25:00", "done": false }
+      ]
+    }
   ]
 }
 ```
 
-Writes go to a temporary file and are then renamed into place, so an interrupted save can't leave you with a truncated todo list.
+Writes go to a temporary file and are then renamed into place, so an interrupted save can't leave you with a truncated todo list. Files written by earlier versions (a flat `todos` list, or 1.0.x's flat list of `"[14:23] do the thing"` strings) are migrated into a single tab the first time they're loaded.
 
 ---
 
@@ -239,6 +257,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
 
 **Auto-start on login** - Press `Win+R`, run `shell:startup`, and drop a shortcut to `sidenote.exe` in there. Find it with `(Get-Command sidenote).Source`.
 **Multiple terminals** - Use the 🔓 lock button to pin it to one terminal.
+**Separate lists** - Use tabs to split work from personal, or one project from another.
 **Muscle memory** - `Shift+Tab` uses the same hand position as `Tab`.
 **Quick capture** - `Shift+Tab` → type → `Enter` → `Shift+Tab`. Three seconds.
 **Clean slate** - `Ctrl+Delete` clears everything checked off, or delete `~/.terminal_todos.json` to wipe all todos.
