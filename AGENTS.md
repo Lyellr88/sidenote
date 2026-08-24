@@ -187,6 +187,19 @@ Manual checklist:
 - Test manually before publishing
 - Update README for user-facing changes
 
+## Linting
+
+`pyproject.toml`'s `[tool.ruff.lint]` `select` is deliberate, not exhaustive - ruff has no config here by default, which means it runs with essentially every rule category enabled, including ones aimed at async libraries and web-service security auditing that don't fit a synchronous Windows desktop app. The list there is a standard baseline (`E`, `W`, `F`, `I`, `UP`, `B`, `C4`, `SIM`, `RUF`) plus three specific rules from noisier categories that turned out worth keeping once every finding they raised was actually checked, not just fixed on autopilot:
+
+- **`BLE001`** (blind `except Exception`) - most sites narrow to the real exception type. Pywin32 calls (`win32gui.*`, `win32process.*`) raise `pywintypes.error`, not `OSError`; sites here catch `(pywintypes.error, OSError)` for margin against version differences, not because they're unsure what's really thrown. A few sites (the `WindowEventListener._dispatch` trampoline, `TerminalOverlay._pump`, the hotkey thread) stay broad on purpose - they're dispatching arbitrary callbacks from a background thread or a ctypes callback boundary, where the whole point is "catch anything so one bad callback doesn't take the thread down," and narrowing them would defeat that. Those carry a `# noqa: BLE001` plus a comment saying why, or use `contextlib.suppress(Exception)` where no exception detail is needed.
+- **`PLR0402`** / **`PLW1510`** - `from importlib import metadata` over the aliased form, and explicit `check=False` on `subprocess.run()` calls that already branch on `.returncode`. Both are safe, mechanical, zero-behavior-change fixes.
+
+`DTZ005`/`DTZ006` (naive `datetime.now()`) are not selected at all - `storage.py` stores and displays local wall-clock time on purpose (todos show as "14:23", not UTC), so timezone-aware timestamps would be a real behavior and data-format change, not a cleanup. `RUF001` is selected but `×` (the tab-delete and help-panel close glyph) is ignored project-wide in the `ignore` list, since it's a deliberate icon choice that would refire on every future close button, not a confusable-character typo.
+
+When a new `except Exception:` shows up: check what the wrapped call can actually raise before choosing a narrower type or a `noqa`. A guess that happens to satisfy ruff but misses a real exception type is worse than the blind catch it replaced - it looks fixed and isn't.
+
 ## CI
 
-`.github/workflows/ci.yml` runs on push to `master` only - not on pull requests. It runs `pytest` (ruff is deliberately not in it yet; there's a backlog of pre-existing findings to clear first), then on success builds and publishes to PyPI with `twine upload --skip-existing`. `--skip-existing` matters: without it, any push that didn't bump the version would fail the publish step every time, since PyPI rejects re-uploading a version that already exists - skipping it quietly is correct, since the version number is what decides whether there's anything new to ship. Publishing needs a `PYPI_API_TOKEN` repository secret; without one, the publish job fails harmlessly and tests still ran.
+`.github/workflows/ci.yml` runs on push to `master` only - not on pull requests. It runs `ruff check .` then `pytest`, then on success builds and publishes to PyPI with `twine upload --skip-existing`. `--skip-existing` matters: without it, any push that didn't bump the version would fail the publish step every time, since PyPI rejects re-uploading a version that already exists - skipping it quietly is correct, since the version number is what decides whether there's anything new to ship. Publishing needs a `PYPI_API_TOKEN` repository secret; without one, the publish job fails harmlessly and tests still ran.
+
+The lint step will fail the whole run on any finding, since `ruff check .` has no `--exit-zero` - a change that reintroduces a bare `except Exception:` or similar fails CI, not just a local check. See the "Linting" section above for what's actually selected and why.

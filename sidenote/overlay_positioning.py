@@ -3,7 +3,10 @@ keeping the overlay positioned and sized to match - plus the lock that pins
 the overlay to one specific terminal.
 """
 
+import contextlib
 import tkinter as tk
+
+import pywintypes
 
 from . import winutil
 from .overlay_theme import (
@@ -144,7 +147,9 @@ class PositioningMixin:
             return
         try:
             _, term_top, term_right, term_bottom = winutil.visible_rect(terminal)
-        except Exception as exc:
+        except (pywintypes.error, OSError) as exc:
+            # The terminal can close in the gap between get_terminal_window()
+            # returning it and this call running.
             self.set_status(f"Positioning failed: {exc}", error=True)
             return
 
@@ -189,10 +194,8 @@ class PositioningMixin:
         if abs(scale - self._scale) < 0.01:
             return
         self._scale = scale
-        try:
+        with contextlib.suppress(tk.TclError):
             self.root.tk.call("tk", "scaling", dpi / 72.0)
-        except tk.TclError:
-            pass
 
     # ------------------------------------------------------------------ lock
 

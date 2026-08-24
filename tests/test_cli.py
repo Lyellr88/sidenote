@@ -223,14 +223,14 @@ def test_unknown_command_is_rejected(monkeypatch, capsys):
 
 
 def test_version_matches_package_metadata():
-    import importlib.metadata as metadata
+    from importlib import metadata
 
     assert cli._version() == metadata.version("sidenote")
 
 
 def test_version_falls_back_when_metadata_missing(monkeypatch):
     """Running from a checkout that was never pip-installed still reports."""
-    import importlib.metadata as metadata
+    from importlib import metadata
 
     def boom(name):
         raise metadata.PackageNotFoundError(name)

@@ -10,6 +10,7 @@ separate lists. Files written by 1.0.x were a flat list of
 with no tabs; both are migrated into a single tab on load.
 """
 
+import contextlib
 import json
 import os
 import re
@@ -169,8 +170,6 @@ def save(tabs, active_tab=0, path=DATA_FILE):
         return None
     except OSError as exc:
         if tmp_name and os.path.exists(tmp_name):
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_name)
-            except OSError:
-                pass
         return f"Save failed: {exc}"

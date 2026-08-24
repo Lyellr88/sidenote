@@ -13,6 +13,7 @@ pip replaces this package's files mid-run, so nothing may be imported lazily
 afterwards.
 """
 
+import contextlib
 import ctypes
 import subprocess
 import sys
@@ -26,10 +27,8 @@ WAIT_OBJECT_0 = 0
 
 def _pause():
     """Keep the console window open, unless there's no stdin to read."""
-    try:
+    with contextlib.suppress(EOFError, OSError):
         input("\nPress Enter to close...")
-    except (EOFError, OSError):
-        pass
 
 
 def _wait_for_exit(pid, timeout_ms=30000):
@@ -66,8 +65,21 @@ def main():
         time.sleep(0.5)
 
     print()
+    # --no-cache-dir: pip's local metadata cache can outlive a release by
+    # hours, and `install --upgrade` trusts it rather than re-checking PyPI -
+    # so right after a new version ships, this silently no-ops with
+    # "Requirement already satisfied" instead of upgrading anything.
     result = subprocess.run(
-        [sys.executable, "-m", "pip", "install", "--upgrade", "--no-cache-dir", PACKAGE]
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--upgrade",
+            "--no-cache-dir",
+            PACKAGE,
+        ],
+        check=False,
     )
 
     print()
@@ -75,7 +87,7 @@ def main():
         print("Upgrade complete. Run 'sidenote' to start it again.")
     else:
         print("Upgrade failed. You can retry manually with:")
-        print(f"  python -m pip install --upgrade {PACKAGE}")
+        print(f"  python -m pip install --upgrade --no-cache-dir {PACKAGE}")
 
     _pause()
     return result.returncode

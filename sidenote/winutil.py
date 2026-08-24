@@ -11,11 +11,13 @@ Two things here matter for correctness:
   overlay reacts immediately and costs nothing while idle.
 """
 
+import contextlib
 import ctypes
 import os
 import threading
 from ctypes import wintypes
 
+import pywintypes
 import win32con
 import win32gui
 import win32process
@@ -90,10 +92,8 @@ def enable_dpi_awareness():
         return
     except (AttributeError, OSError):
         pass
-    try:
+    with contextlib.suppress(AttributeError, OSError):
         ctypes.windll.user32.SetProcessDPIAware()
-    except (AttributeError, OSError):
-        pass
 
 
 def dpi_for_window(hwnd):
@@ -130,7 +130,8 @@ def process_name(hwnd):
     """Lowercased executable name owning a window, or '' if unknown."""
     try:
         _, pid = win32process.GetWindowThreadProcessId(hwnd)
-    except Exception:
+    except (pywintypes.error, OSError):
+        # The window can close between EnumWindows finding it and this call.
         return ""
     if not pid:
         return ""
@@ -170,7 +171,8 @@ def is_terminal(hwnd, own_pid=None):
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
             if pid == own_pid:
                 return False
-        except Exception:
+        except (pywintypes.error, OSError):
+            # Same race as process_name() - fall through to the exe check below.
             pass
     return process_name(hwnd) in TERMINAL_EXES
 
@@ -190,7 +192,7 @@ def find_terminal(own_pid=None):
 
     try:
         win32gui.EnumWindows(callback, found)
-    except Exception:
+    except (pywintypes.error, OSError):
         return None
     return found[0] if found else None
 
@@ -246,7 +248,7 @@ def window_metrics(hwnd):
             max(0, (vr - vl) - client_w),
             max(0, (vb - vt) - client_h),
         )
-    except Exception:
+    except (pywintypes.error, OSError):
         return 0, 0, 0, 0
 
 
@@ -256,7 +258,8 @@ def bring_to_front(hwnd):
     try:
         win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, flags)
         win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, flags)
-    except Exception:
+    except (pywintypes.error, OSError):
+        # Window closed under us; there's nothing to raise any more.
         pass
 
 
@@ -285,10 +288,12 @@ class WindowEventListener:
             return
         if not hwnd:
             return
-        try:
+        # callback is arbitrary application code invoked from a ctypes
+        # trampoline; whatever it raises must not escape into the Win32
+        # message loop calling this. There's no fixed exception surface to
+        # narrow to, which is exactly why this stays broad.
+        with contextlib.suppress(Exception):
             self.callback(event, hwnd)
-        except Exception:
-            pass
 
     def start(self):
         self._thread = threading.Thread(target=self._run, daemon=True)

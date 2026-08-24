@@ -66,7 +66,7 @@ sidenote/
 
 Before submitting a PR:
 
-**Automated** - `pytest` (all green; add tests for your change). `tests/test_overlay_smoke.py` instantiates the real overlay headlessly and covers most tab/todo behavior directly - extend it rather than only adding manual checks below.
+**Automated** - `ruff check .` and `pytest` (both green; add tests for your change, and see AGENTS.md's "Linting" section before narrowing or suppressing a finding). `tests/test_overlay_smoke.py` instantiates the real overlay headlessly and covers most tab/todo behavior directly - extend it rather than only adding manual checks below.
 
 **Manual** - fills in what automated coverage doesn't reach (real mouse/keyboard timing, visual layout):
 
@@ -106,7 +106,7 @@ Before submitting a PR:
 
 ## Publishing (Maintainers Only)
 
-`.github/workflows/ci.yml` builds and publishes to PyPI automatically on every push to `master`, once a `PYPI_API_TOKEN` repository secret is set. It uses `--skip-existing`, so a push that didn't bump the version just skips the publish step rather than failing - bump the version to actually ship a release.
+`.github/workflows/ci.yml` lints (`ruff check .`) and tests every push to `master`, then builds and publishes to PyPI automatically once a `PYPI_API_TOKEN` repository secret is set. It uses `--skip-existing`, so a push that didn't bump the version just skips the publish step rather than failing - bump the version to actually ship a release. A lint or test failure blocks the publish step entirely.
 
 The manual equivalent, useful before that secret exists or to publish outside of a push to `master`:
 

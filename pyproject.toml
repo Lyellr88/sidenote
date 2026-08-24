@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sidenote"
-version = "1.3.1"
+version = "1.3.2"
 description = "A zero-friction todo overlay for your terminal. Built for ADHD developers."
 readme = "README.md"
 # 3.7 is the real floor: cli.py uses subprocess.CREATE_NO_WINDOW, added in 3.7.
@@ -36,7 +36,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0"]
+dev = ["pytest>=7.0", "ruff>=0.16"]
 
 [project.urls]
 Homepage = "https://github.com/Lyellr88/sidenote"
@@ -52,3 +52,33 @@ include = ["sidenote*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff.lint]
+# Ruff has no config file here by default, which means every rule category
+# it ships is enabled - including ones aimed at async libraries, web-service
+# security auditing, and timezone-aware datetimes, none of which fit a
+# synchronous Windows desktop app that stores local wall-clock times on
+# purpose. This selects a standard, broadly-applicable baseline plus the
+# handful of specific rules from noisier categories (BLE, PLR, PLW) that
+# turned out to be worth keeping once every finding they raised was checked
+# by hand - see AGENTS.md's "Linting" section.
+select = [
+    "E",       # pycodestyle errors
+    "W",       # pycodestyle warnings
+    "F",       # pyflakes
+    "I",       # import sorting
+    "UP",      # pyupgrade
+    "B",       # bugbear - common bug patterns
+    "C4",      # comprehensions
+    "SIM",     # simplify
+    "RUF",     # ruff-specific
+    "BLE001",  # blind `except Exception` - narrow it or justify it with noqa
+    "PLR0402", # `import x.y as y` instead of `from x import y`
+    "PLW1510", # subprocess.run() without an explicit check= argument
+]
+ignore = [
+    # "×" (multiplication sign) is a deliberate close/delete-button glyph in
+    # the overlay UI, not a typo for "x" - this would refire on every close
+    # button the UI ever adds.
+    "RUF001",
+]

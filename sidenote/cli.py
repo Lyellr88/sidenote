@@ -106,15 +106,15 @@ def _version():
     never pip-installed.
     """
     try:
-        import importlib.metadata as metadata
+        from importlib import metadata
 
         return metadata.version("sidenote")
-    except Exception:
+    except metadata.PackageNotFoundError:
         try:
             from . import __version__
 
             return __version__
-        except Exception:
+        except ImportError:
             return "unknown"
 
 
@@ -134,6 +134,7 @@ def _installed_version():
             capture_output=True,
             text=True,
             timeout=30,
+            check=False,
         )
         return result.stdout.strip() or None
     except (OSError, subprocess.SubprocessError):
@@ -147,7 +148,7 @@ def _is_editable_install():
     working copy with a release build, so we refuse and point at git instead.
     """
     try:
-        import importlib.metadata as metadata
+        from importlib import metadata
 
         raw = metadata.distribution("sidenote").read_text("direct_url.json")
         if not raw:
@@ -155,7 +156,7 @@ def _is_editable_install():
         import json
 
         return bool(json.loads(raw).get("dir_info", {}).get("editable"))
-    except Exception:
+    except (metadata.PackageNotFoundError, OSError, json.JSONDecodeError):
         return False
 
 
@@ -195,7 +196,8 @@ def upgrade():
     except OSError as exc:
         _say(f"✗ Could not start the upgrade helper: {exc}")
         _say(
-            "  Run this instead: python -m pip install --upgrade --no-cache-dir sidenote"
+            "  Run this instead: python -m pip install --upgrade "
+            "--no-cache-dir sidenote"
         )
         sys.exit(1)
 
@@ -241,10 +243,12 @@ def init():
             _say("! Your profile has the old broken aliases in it:")
             _say("    Set-Alias -Name stop-note -Value sidenote")
             _say(
-                f"  Remove that block from {profile_path} and run 'sidenote init' again."
+                f"  Remove that block from {profile_path} and run "
+                "'sidenote init' again."
             )
             _say(
-                "  (stop-note was aliased to plain 'sidenote', so it started the overlay.)"
+                "  (stop-note was aliased to plain 'sidenote', so it "
+                "started the overlay.)"
             )
             sys.exit(1)
         _say("✓ PowerShell functions already configured")

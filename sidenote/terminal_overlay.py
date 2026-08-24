@@ -15,6 +15,7 @@ machine (naming a tab and editing a todo both drive it), visibility, and the
 process lifecycle.
 """
 
+import contextlib
 import os
 import queue
 import sys
@@ -80,9 +81,13 @@ class TerminalOverlay(OverlayUIMixin, PositioningMixin, TabsMixin, TodosMixin):
         try:
             while True:
                 fn = self._work.get_nowait()
+                # fn is an arbitrary queued callback (from the Win32 hook
+                # thread or the hotkey thread); one bad callback must not
+                # take down the pump that every other queued callback relies
+                # on, so this stays broad rather than narrowed to a guess.
                 try:
                     fn()
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     self.set_status(f"Error: {exc}", error=True)
         except queue.Empty:
             pass
@@ -169,7 +174,11 @@ class TerminalOverlay(OverlayUIMixin, PositioningMixin, TabsMixin, TodosMixin):
                     "shift+tab", lambda: self._post(self.toggle), suppress=False
                 )
                 keyboard.wait()
-            except Exception as exc:
+            # The keyboard library's failure modes vary by OS and permission
+            # level (missing native module, no root on Linux, etc.) - the
+            # goal here is "report it and keep running" for any of them
+            # rather than let this background thread die silently.
+            except Exception as exc:  # noqa: BLE001
                 message = f"Hotkey unavailable: {exc}"
                 self._post(lambda: self.set_status(message, error=True))
 
@@ -182,10 +191,8 @@ class TerminalOverlay(OverlayUIMixin, PositioningMixin, TabsMixin, TodosMixin):
         if "--show" in sys.argv:
             self.show()
 
-        try:
+        with contextlib.suppress(KeyboardInterrupt):
             self.root.mainloop()
-        except KeyboardInterrupt:
-            pass
 
 
 def main():

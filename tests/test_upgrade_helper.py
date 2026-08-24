@@ -64,6 +64,7 @@ def test_helper_module_is_runnable():
         [sys.executable, "-c", "import sidenote._upgrade as u; print(u.PACKAGE)"],
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "sidenote"
@@ -78,7 +79,7 @@ def test_pip_upgrade_bypasses_pips_cache(monkeypatch):
     class FakeResult:
         returncode = 0
 
-    def fake_run(cmd):
+    def fake_run(cmd, **kwargs):
         captured["cmd"] = cmd
         return FakeResult()
 

@@ -9,6 +9,7 @@ crash, and a bare "is the PID alive" check can match an unrelated process that
 inherited a recycled PID.
 """
 
+import contextlib
 import ctypes
 import os
 from ctypes import wintypes
@@ -104,10 +105,8 @@ def running_pid(lock_file=LOCK_FILE):
 
 
 def clear(lock_file=LOCK_FILE):
-    try:
+    with contextlib.suppress(OSError):
         Path(lock_file).unlink()
-    except OSError:
-        pass
 
 
 def terminate(pid, timeout_ms=3000):
