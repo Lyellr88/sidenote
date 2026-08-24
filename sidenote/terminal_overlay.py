@@ -41,6 +41,7 @@ HELP_ROWS = [
     ("Enter", "Add todo"),
     ("Double-click", "Check off / uncheck a todo"),
     ("Right-click", "Copy a todo's text"),
+    ("Enter on a todo", "Edit its text"),
     ("Drag a todo", "Reorder it in the list"),
     ("Space", "Check off / uncheck selection"),
     ("Delete", "Remove selected todo"),
@@ -80,6 +81,7 @@ class TerminalOverlay:
         self._user_width = None
         self._applied_w = None
         self._entry_mode = "todo"
+        self._edit_index = None
         self._undo_stack = []
         self._drag_from = None
 
@@ -203,6 +205,8 @@ class TerminalOverlay:
         self.listbox.bind("<Delete>", self.remove_todo)
         self.listbox.bind("<BackSpace>", self.remove_todo)
         self.listbox.bind("<Control-Delete>", self.clear_done)
+        self.listbox.bind("<Return>", self.start_edit_todo)
+        self.listbox.bind("<KP_Enter>", self.start_edit_todo)
         self.listbox.bind("<Escape>", lambda e: self.hide())
 
         self.listbox.bind("<Button-1>", self._on_list_press)
@@ -591,6 +595,7 @@ class TerminalOverlay:
 
     def _leave_entry_mode(self):
         self._entry_mode = "todo"
+        self._edit_index = None
         self.entry.delete(0, tk.END)
         self.entry.config(highlightthickness=0)
 
@@ -599,6 +604,8 @@ class TerminalOverlay:
             self._commit_new_tab()
         elif self._entry_mode == "rename_tab":
             self._commit_rename_tab()
+        elif self._entry_mode == "edit_todo":
+            self._commit_edit_todo()
         else:
             self.add_todo()
 
@@ -810,6 +817,27 @@ class TerminalOverlay:
         self.refresh_list()
         self.listbox.see(tk.END)
         self.save_todos()
+
+    def start_edit_todo(self, event=None):
+        index = self._selected_index(event)
+        if index is None:
+            return "break"
+        self._entry_mode = "edit_todo"
+        self._edit_index = index
+        self._prime_entry(self.todos[index].get("text", ""))
+        self.set_status("Edit todo, Enter to save")
+        return "break"
+
+    def _commit_edit_todo(self):
+        text = self.entry.get().strip()
+        index = self._edit_index
+        self._leave_entry_mode()
+        if text and index is not None and index < len(self.todos):
+            self.todos[index]["text"] = text
+            self.refresh_list()
+            self.listbox.selection_set(index)
+            self.listbox.activate(index)
+            self.save_todos()
 
     def toggle_done(self, event=None):
         index = self._selected_index(event)

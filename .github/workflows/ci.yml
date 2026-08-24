@@ -1,0 +1,43 @@
+name: CI
+
+# Push to master only - not run on pull requests.
+on:
+  push:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Run tests
+        run: pytest
+
+  publish:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install build tools
+        run: pip install build twine
+      - name: Build
+        run: python -m build
+      - name: Check distributions
+        run: twine check dist/*
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        # --skip-existing: a push that didn't bump the version would
+        # otherwise fail here every time, since PyPI rejects re-uploading a
+        # version that's already published. Skipping it quietly is correct -
+        # the version is what decides whether there's anything new to ship.
+        run: twine upload --skip-existing dist/*

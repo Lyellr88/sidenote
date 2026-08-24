@@ -30,6 +30,7 @@ There is exactly one copy of the application code, inside `sidenote/`. A duplica
 - Global hotkey (`Shift+Tab`) to toggle visibility
 - Check todos off (double-click / `Space`); `Ctrl+Delete` clears completed
 - Right-click a todo to copy its text, acknowledged by a colour fade
+- `Enter` on a selected todo edits its text in place
 - Drag a todo to reorder it within its tab
 - Up to 5 tabs, each a separate todo list, added/renamed/switched/deleted from the header and footer, with a confirmation popup before deletion
 - `Ctrl+Z` undoes the last delete (single or `Ctrl+Delete` batch), per tab
@@ -69,7 +70,7 @@ Tk draws the *selected* row with `selectforeground`, ignoring per-item `fg`. Any
 `storage.MAX_TABS` (5) exists because the tab-switcher buttons live in the header next to the centred "Sidenote" title - past 5 tabs the button row can reach far enough right to overlap the title on the default 280px width. Widening this cap means re-measuring that overlap (see `_render_tabs`'s tight `padx=2`), not just bumping the constant.
 
 **Entry field modes:**
-The single entry field is reused for three things - `self._entry_mode` is `"todo"`, `"new_tab"`, or `"rename_tab"`, and `_on_entry_return`/`_on_entry_escape` dispatch on it. `start_new_tab()`/`start_rename_tab()` prime the field (pre-filled text, selected, a blue `ACCENT` focus ring) and `_leave_entry_mode()` always clears both the mode and the ring - a naming step left half-finished must not leak into a later plain todo add.
+The single entry field is reused for four things - `self._entry_mode` is `"todo"`, `"new_tab"`, `"rename_tab"`, or `"edit_todo"`, and `_on_entry_return`/`_on_entry_escape` dispatch on it. `start_new_tab()`/`start_rename_tab()`/`start_edit_todo()` prime the field (pre-filled text, selected, a blue `ACCENT` focus ring) via `_prime_entry()`, and `_leave_entry_mode()` always clears the mode, the ring, and `self._edit_index` - a naming or editing step left half-finished must not leak into a later plain todo add. `start_edit_todo()` is bound to `<Return>` on the listbox itself, not the entry - the entry's own `<Return>` is already the commit key for whichever mode is active.
 
 **Storage:**
 `{"version": 3, "active_tab": int, "tabs": [{"name", "todos": [{"text", "created", "done"}]}]}` at `~/.terminal_todos.json`. Saves are atomic (temp file + `os.replace`). Pre-tabs files (a flat `todos` list, schema 2, or 1.0.x's flat list of `"[14:23] Fix bug"` strings) are migrated into a single tab on load; keep that path working. `storage.load()` never returns an empty tab list, so callers can always index `tabs[active_tab]`. `storage.save()` returns an error string rather than raising or swallowing - surface it in the status bar.
@@ -133,7 +134,9 @@ pytest
 
 Tests that spawn real processes or enumerate live windows assert on invariants, not on specific machines. Keep them that way.
 
-The tkinter UI has no automated coverage; verify by hand:
+`tests/test_overlay_smoke.py` covers the tkinter UI by instantiating a real `TerminalOverlay` headlessly and driving its actual methods - tabs, drag-reorder, undo, edit-in-place, the header-overlap regression at 5 tabs. Storage is redirected via `monkeypatch.setattr(storage, "load"/"save", ...)`, not the `DATA_FILE` attribute - `load`/`save`'s own default parameter is already bound to the real path at import time, so patching the attribute afterward wouldn't change it. Each test's fixture retries `TerminalOverlay()` on `TclError`: the background `WindowEventListener` thread it starts has no `stop()` and can still be unwinding when the next test's Tk interpreter is created, which occasionally raises a spurious error unrelated to anything under test.
+
+That file covers logic, not real mouse/keyboard input - `event_generate` proved too timing-sensitive for things like double-clicks and popup keystrokes during development (works in isolation, fails depending on prior test timing in the same process) to trust in CI. Those are exercised by calling the bound method directly instead (e.g. `overlay.toggle_done()` rather than a synthetic double-click), which still runs the real production code. Manual verification is still worthwhile for anything the automated coverage doesn't reach:
 
 ```powershell
 sidenote         # Test start
@@ -149,6 +152,7 @@ Manual checklist:
 - ✅ Comes forward when clicking terminal, without stealing keyboard focus
 - ✅ `Shift+Tab` toggles visibility
 - ✅ Double-click checks a todo off; `Ctrl+Delete` clears completed ones
+- ✅ `Enter` on a selected todo loads it for editing; `Enter` again saves, `Escape` cancels without changing it
 - ✅ Right-click copies a todo and flashes it; the row returns to its normal colour
 - ✅ The flash is visible on a row that is currently selected, not just unselected ones
 - ✅ Dragging a todo up or down moves it, and the new order survives a restart
@@ -172,3 +176,7 @@ Manual checklist:
 - Match existing code style (no major refactors)
 - Test manually before publishing
 - Update README for user-facing changes
+
+## CI
+
+`.github/workflows/ci.yml` runs on push to `master` only - not on pull requests. It runs `pytest` (ruff is deliberately not in it yet; there's a backlog of pre-existing findings to clear first), then on success builds and publishes to PyPI with `twine upload --skip-existing`. `--skip-existing` matters: without it, any push that didn't bump the version would fail the publish step every time, since PyPI rejects re-uploading a version that already exists - skipping it quietly is correct, since the version number is what decides whether there's anything new to ship. Publishing needs a `PYPI_API_TOKEN` repository secret; without one, the publish job fails harmlessly and tests still ran.

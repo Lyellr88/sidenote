@@ -253,7 +253,9 @@ pip install -e ".[dev]"
 pytest
 ```
 
-The suite covers storage, the PID lock's liveness and PID-reuse handling, window-detection invariants, and CLI behaviour. The tkinter UI has no automated coverage - see the manual checklist in [AGENTS.md](AGENTS.md), which also documents the invariants that are easy to break by accident.
+The suite covers storage, the PID lock's liveness and PID-reuse handling, window-detection invariants, CLI behaviour, and - via `tests/test_overlay_smoke.py` - the tkinter overlay itself, driven headlessly. A small manual checklist in [AGENTS.md](AGENTS.md) covers what that doesn't reach, and documents the invariants that are easy to break by accident.
+
+A GitHub Actions workflow runs the suite on every push to `master` and publishes to PyPI on success; see [AGENTS.md](AGENTS.md#ci).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
 

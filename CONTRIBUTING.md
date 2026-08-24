@@ -32,6 +32,7 @@ sidenote/
     storage.py            # Load / migrate / atomically save todos
     lockfile.py           # PID-based single-instance lock
   tests/                  # pytest suite
+  .github/workflows/      # CI: test, build, and publish on push to master
   pyproject.toml          # Package config
   README.md               # User guide
   DOCS.md                 # FAQ, troubleshooting, internals
@@ -60,9 +61,9 @@ sidenote/
 
 Before submitting a PR:
 
-**Automated** - `pytest` (all green; add tests for your change)
+**Automated** - `pytest` (all green; add tests for your change). `tests/test_overlay_smoke.py` instantiates the real overlay headlessly and covers most tab/todo behavior directly - extend it rather than only adding manual checks below.
 
-**Manual** - the tkinter UI isn't covered automatically:
+**Manual** - fills in what automated coverage doesn't reach (real mouse/keyboard timing, visual layout):
 
 - ✅ `sidenote` starts the overlay, `sidenote status` reports it
 - ✅ `sidenote stop` stops it - and leaves your other Python processes alone
@@ -70,6 +71,7 @@ Before submitting a PR:
 - ✅ Overlay sits flush against the terminal, matching its height
 - ✅ `Shift+Tab` toggles visibility
 - ✅ Double-click checks a todo off; `Ctrl+Delete` clears completed ones
+- ✅ `Enter` on a todo edits it in place; `Escape` cancels without saving
 - ✅ Right-click copies a todo, including one that's selected; the list scrolls by wheel and arrow keys
 - ✅ Dragging a todo reorders it, and `Ctrl+Z` restores a todo (or a `Ctrl+Delete` batch) you just deleted
 - ✅ `+` adds a tab (up to 5); double-clicking its name in the footer renames it
@@ -98,6 +100,10 @@ Before submitting a PR:
 6. Open a PR with a clear description
 
 ## Publishing (Maintainers Only)
+
+`.github/workflows/ci.yml` builds and publishes to PyPI automatically on every push to `master`, once a `PYPI_API_TOKEN` repository secret is set. It uses `--skip-existing`, so a push that didn't bump the version just skips the publish step rather than failing - bump the version to actually ship a release.
+
+The manual equivalent, useful before that secret exists or to publish outside of a push to `master`:
 
 ```powershell
 # Bump version in pyproject.toml and sidenote/__init__.py
