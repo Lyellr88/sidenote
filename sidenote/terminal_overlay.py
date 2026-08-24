@@ -51,6 +51,7 @@ HELP_ROWS = [
     ("Ctrl+Z", "Undo the last delete"),
     ("+ button", "Add a tab (up to 5)"),
     ("Double-click tab name", "Rename the current tab"),
+    ("× next to tab name", "Delete the current tab, with confirmation"),
     ("Escape", "Hide overlay"),
     ("Lock button", "Stick to one specific terminal"),
     ("Drag title bar", "Detach and place it yourself"),
@@ -77,6 +78,7 @@ class TerminalOverlay:
         self._reposition_job = None
         self._help_window = None
         self._lock_tooltip = None
+        self._confirm_window = None
         self._scale = 1.0
         self._user_width = None
         self._applied_w = None
@@ -243,6 +245,13 @@ class TerminalOverlay:
         )
         self.tab_label.pack(side=tk.LEFT, fill=tk.Y)
         self.tab_label.bind("<Double-Button-1>", lambda e: self.start_rename_tab())
+
+        # Only packed once a second tab exists - see _update_tab_label(). You
+        # can't delete the one tab that's left.
+        self.delete_tab_btn = tk.Label(
+            footer, text="×", fg=MUTED, bg=BAR_BG, cursor="hand2", font=("Consolas", 10)
+        )
+        self.delete_tab_btn.bind("<Button-1>", lambda e: self._confirm_delete_tab())
 
         self.status = tk.Label(
             footer, text="", fg=MUTED, bg=BAR_BG, font=("Consolas", 8), anchor="e", padx=8
@@ -642,6 +651,10 @@ class TerminalOverlay:
 
     def _update_tab_label(self):
         self.tab_label.config(text=self.tabs[self.active_tab]["name"])
+        if len(self.tabs) > 1:
+            self.delete_tab_btn.pack(side=tk.LEFT, fill=tk.Y, after=self.tab_label)
+        else:
+            self.delete_tab_btn.pack_forget()
 
     def _render_tabs(self):
         """Numbered switcher buttons, shown only once a second tab exists."""
@@ -664,6 +677,105 @@ class TerminalOverlay:
             )
             btn.pack(side=tk.LEFT)
             btn.bind("<Button-1>", lambda e, idx=i: self._switch_tab(idx))
+
+    def _confirm_delete_tab(self):
+        if len(self.tabs) <= 1:
+            return
+        index = self.active_tab
+        name = self.tabs[index]["name"]
+        count = len(self.tabs[index]["todos"])
+        if count == 0:
+            detail = "It's empty."
+        elif count == 1:
+            detail = "1 todo goes with it."
+        else:
+            detail = f"{count} todos go with it."
+        self._show_confirm(
+            f'Delete "{name}"? {detail}', lambda: self._delete_tab(index), self.delete_tab_btn
+        )
+
+    def _delete_tab(self, index):
+        if len(self.tabs) <= 1 or not (0 <= index < len(self.tabs)):
+            return
+        del self.tabs[index]
+        # Undo entries point at a tab by index; the deleted tab's entries no
+        # longer have anywhere to go, and later tabs shift down by one.
+        self._undo_stack = [
+            (i - 1 if i > index else i, snapshot)
+            for i, snapshot in self._undo_stack
+            if i != index
+        ]
+        self._switch_tab(min(index, len(self.tabs) - 1))
+        self.save_todos()
+        self.set_status("Tab deleted")
+
+    def _show_confirm(self, message, on_confirm, anchor_widget):
+        """Small themed confirmation popup, sized to fit next to the overlay
+        rather than a native OS dialog."""
+        self._hide_confirm()
+        panel = tk.Toplevel(self.root)
+        panel.wm_overrideredirect(True)
+        panel.configure(bg=BG, highlightbackground="#3e3e42", highlightthickness=1)
+
+        tk.Label(
+            panel,
+            text=message,
+            bg=BG,
+            fg=FG,
+            font=("Consolas", 8),
+            wraplength=200,
+            justify="left",
+            padx=10,
+            pady=8,
+        ).pack(fill=tk.X)
+
+        buttons = tk.Frame(panel, bg=BG)
+        buttons.pack(fill=tk.X, padx=10, pady=(0, 8))
+
+        def confirm(event=None):
+            self._hide_confirm()
+            on_confirm()
+
+        delete_btn = tk.Label(
+            buttons,
+            text="Delete",
+            bg=ERROR_FG,
+            fg=BG,
+            cursor="hand2",
+            font=("Consolas", 8, "bold"),
+            padx=8,
+            pady=3,
+        )
+        delete_btn.pack(side=tk.RIGHT)
+        delete_btn.bind("<Button-1>", confirm)
+
+        cancel_btn = tk.Label(
+            buttons,
+            text="Cancel",
+            bg="#3e3e42",
+            fg=FG,
+            cursor="hand2",
+            font=("Consolas", 8),
+            padx=8,
+            pady=3,
+        )
+        cancel_btn.pack(side=tk.RIGHT, padx=(0, 6))
+        cancel_btn.bind("<Button-1>", lambda e: self._hide_confirm())
+
+        panel.update_idletasks()
+        x = anchor_widget.winfo_rootx()
+        y = anchor_widget.winfo_rooty() - panel.winfo_reqheight() - 4
+        max_x = self.root.winfo_screenwidth() - panel.winfo_reqwidth() - 4
+        panel.wm_geometry(f"+{max(4, min(x, max_x))}+{max(4, y)}")
+
+        panel.bind("<Escape>", lambda e: self._hide_confirm())
+        panel.focus_set()
+        self._confirm_window = panel
+
+    def _hide_confirm(self):
+        if self._confirm_window:
+            self._confirm_window.destroy()
+            self._confirm_window = None
 
     # ------------------------------------------------------------------ todos
 
@@ -868,6 +980,7 @@ class TerminalOverlay:
 
     def hide(self):
         self.hide_help()
+        self._hide_confirm()
         self.root.withdraw()
         self.visible = False
         self.user_hidden = True

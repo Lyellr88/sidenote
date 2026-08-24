@@ -31,7 +31,7 @@ There is exactly one copy of the application code, inside `sidenote/`. A duplica
 - Check todos off (double-click / `Space`); `Ctrl+Delete` clears completed
 - Right-click a todo to copy its text, acknowledged by a colour fade
 - Drag a todo to reorder it within its tab
-- Up to 5 tabs, each a separate todo list, added/renamed/switched from the header and footer
+- Up to 5 tabs, each a separate todo list, added/renamed/switched/deleted from the header and footer, with a confirmation popup before deletion
 - `Ctrl+Z` undoes the last delete (single or `Ctrl+Delete` batch), per tab
 - Width is user-resizable by dragging; height stays matched to the terminal
 - `?` button showing all quick actions
@@ -62,6 +62,9 @@ Tk draws the *selected* row with `selectforeground`, ignoring per-item `fg`. Any
 
 **Tabs and the `self.todos` alias:**
 `self.todos` is not a copy - it *is* `self.tabs[self.active_tab]["todos"]`, the same list object. Every mutation (`add_todo`, `remove_todo`, drag-reorder, undo) uses in-place operations (`.append`, `del ...[i]`, `[:]  = ...`, `.pop`/`.insert`) so the alias stays valid without an explicit sync step. A plain `self.todos = new_list` rebind breaks it silently - `clear_done` had this bug during development; it must slice-assign (`self.todos[:] = remaining`). `_switch_tab` is the only place allowed to rebind, since it's deliberately pointing at a different tab's list.
+
+**Deleting a tab and the undo stack:**
+`_undo_stack` entries are `(tab_index, snapshot)` pairs, so removing a tab (`_delete_tab`) has to walk the stack: drop entries pointing at the deleted tab, and shift down by one every index greater than it. Skipping this leaves stale entries that either restore into the wrong tab after later tabs shift, or reference an index that no longer exists. `_confirm_delete_tab` captures the target tab's index in a closure rather than reading `self.active_tab` again inside the confirm callback, since the active tab could change while the popup is open.
 
 `storage.MAX_TABS` (5) exists because the tab-switcher buttons live in the header next to the centred "Sidenote" title - past 5 tabs the button row can reach far enough right to overlap the title on the default 280px width. Widening this cap means re-measuring that overlap (see `_render_tabs`'s tight `padx=2`), not just bumping the constant.
 
@@ -155,6 +158,8 @@ Manual checklist:
 - ✅ `+` adds a tab, capped at 5; the entry field switches to naming mode and back
 - ✅ Double-clicking the footer tab name renames it; `Escape` cancels a name in progress
 - ✅ The numbered tab buttons switch lists, and don't overlap the "Sidenote" title at 5 tabs
+- ✅ The footer `×` only appears with 2+ tabs; it asks for confirmation before deleting, and Cancel/Escape leave the tab alone
+- ✅ Deleting a tab you weren't on doesn't happen - only the active tab's `×` is reachable
 - ✅ `Ctrl+Delete` then `Ctrl+Z` restores the cleared todos; a single delete then `Ctrl+Z` restores that one
 - ✅ Todos persist after restart, and a 1.0.x or pre-tabs (schema 2) file migrates cleanly
 - ✅ Lock button works, and survives the locked terminal being closed

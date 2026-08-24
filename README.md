@@ -73,6 +73,7 @@ PowerShell profile.
 **Add a tab** - click `+` in the top-left, type a name, press `Enter`. Up to 5.
 **Switch tabs** - click a numbered tab button next to `+`.
 **Rename a tab** - double-click its name in the footer, type a new one, press `Enter`.
+**Delete a tab** - click the `×` next to its name in the footer, then confirm. Only shows once you have a second tab.
 
 The `?` button lists every action, so there's nothing to memorise.
 

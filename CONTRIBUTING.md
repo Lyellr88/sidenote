@@ -73,6 +73,7 @@ Before submitting a PR:
 - ✅ Right-click copies a todo, including one that's selected; the list scrolls by wheel and arrow keys
 - ✅ Dragging a todo reorders it, and `Ctrl+Z` restores a todo (or a `Ctrl+Delete` batch) you just deleted
 - ✅ `+` adds a tab (up to 5); double-clicking its name in the footer renames it
+- ✅ The footer `×` deletes the current tab after confirming, and doesn't show with only one tab left
 - ✅ A width set by dragging the edge survives the terminal being moved or resized
 - ✅ `?` panel lists the actions and closes again
 - ✅ Todos persist after closing/reopening

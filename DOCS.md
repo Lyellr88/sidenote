@@ -43,7 +43,7 @@ Height isn't adjustable: it tracks your terminal's height so the two stay flush.
 
 **Can I have more than one list?**
 
-Yes - up to 5 tabs. Click `+` in the top-left to add one; the entry field switches to naming mode, so type a name and press `Enter`. Switch tabs with the numbered buttons that appear next to `+`, and double-click a tab's name in the footer to rename it.
+Yes - up to 5 tabs. Click `+` in the top-left to add one; the entry field switches to naming mode, so type a name and press `Enter`. Switch tabs with the numbered buttons that appear next to `+`, and double-click a tab's name in the footer to rename it. A `×` appears next to the name once you have a second tab; it asks you to confirm before deleting that tab and everything in it.
 
 **Can I reorder my todos?**
 
