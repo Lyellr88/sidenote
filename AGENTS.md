@@ -8,7 +8,12 @@ Sidenote is a Python-based terminal overlay for Windows: a todo list that attach
 
 **Core Files:**
 
-- `sidenote/terminal_overlay.py` - tkinter UI, positioning, and event handling
+- `sidenote/terminal_overlay.py` - `TerminalOverlay` itself: setup, cross-thread plumbing, the shared entry-field state machine, visibility, process lifecycle. See "Module Split" below for the rest of the class.
+- `sidenote/overlay_ui.py` - Widget construction, the help panel, tooltips, the generic confirm popup, window dragging
+- `sidenote/overlay_positioning.py` - Terminal window tracking, following, and the lock
+- `sidenote/overlay_tabs.py` - Tab create/rename/switch/delete
+- `sidenote/overlay_todos.py` - Todo add/edit/toggle/remove/reorder/undo, list rendering, persistence calls
+- `sidenote/overlay_theme.py` - Colors, sizing constants, and `HELP_ROWS` - pure data, no behavior
 - `sidenote/winutil.py` - Terminal detection, DPI handling, Win32 event hooks
 - `sidenote/storage.py` - Load / migrate / atomically save todos
 - `sidenote/lockfile.py` - PID-based single-instance lock
@@ -21,6 +26,11 @@ Sidenote is a Python-based terminal overlay for Windows: a todo list that attach
 - `setup.ps1` - Local setup script (for cloned repo use)
 
 There is exactly one copy of the application code, inside `sidenote/`. A duplicate `terminal_overlay.py` used to sit at the repo root; do not reintroduce it.
+
+**Module Split:**
+`TerminalOverlay` was a single ~1050-line file; it's now `TerminalOverlay(OverlayUIMixin, PositioningMixin, TabsMixin, TodosMixin)` split across the five files above, purely by moving methods verbatim into mixin classes - no method was rewritten, renamed, or had its logic changed to make this split, and none of `self.`'s attribute access changed either, since a mixin's methods run against the same fully-composed instance regardless of which file defines them. Constants moved to `overlay_theme.py` because they're already shared across every one of those files, not because sharing was anticipated - see `problem-solving.md`/`refactor-middle-ground.md`.
+
+Where a new method belongs: window chrome and dialogs → `overlay_ui.py`; anything about where the terminal is or where the overlay sits relative to it → `overlay_positioning.py`; tab CRUD → `overlay_tabs.py`; todo CRUD and list state → `overlay_todos.py`. The entry-field state machine (`_prime_entry`, `_leave_entry_mode`, `_on_entry_return`, `_on_entry_escape`) stays in `terminal_overlay.py` itself rather than in tabs or todos, since both of those already call into it - it's shared orchestration, not owned by either.
 
 **Key Features:**
 

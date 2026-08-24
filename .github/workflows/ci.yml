@@ -36,8 +36,4 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        # --skip-existing: a push that didn't bump the version would
-        # otherwise fail here every time, since PyPI rejects re-uploading a
-        # version that's already published. Skipping it quietly is correct -
-        # the version is what decides whether there's anything new to ship.
         run: twine upload --skip-existing dist/*

@@ -150,7 +150,12 @@ The overlay uses Windows API calls to:
 
 | Path | Purpose |
 |------|---------|
-| `sidenote/terminal_overlay.py` | tkinter UI, positioning, event handling |
+| `sidenote/terminal_overlay.py` | `TerminalOverlay`: setup, lifecycle, entry-field state machine |
+| `sidenote/overlay_ui.py` | Widget construction, help panel, tooltips, confirm popup |
+| `sidenote/overlay_positioning.py` | Terminal window tracking, following, and the lock |
+| `sidenote/overlay_tabs.py` | Tab create/rename/switch/delete |
+| `sidenote/overlay_todos.py` | Todo add/edit/toggle/remove/reorder/undo |
+| `sidenote/overlay_theme.py` | Colors, sizing constants, `HELP_ROWS` |
 | `sidenote/winutil.py` | Terminal detection, DPI, Win32 event hooks |
 | `sidenote/storage.py` | Loading and atomically saving todos |
 | `sidenote/lockfile.py` | PID-based single-instance lock |

@@ -247,7 +247,13 @@ def test_five_tab_switcher_does_not_overlap_title(overlay):
     title = next(
         w
         for w in drag_bar.winfo_children()
-        if w not in (overlay.add_tab_btn, overlay.tabs_frame, overlay.help_btn, overlay.lock_btn)
+        if w
+        not in (
+            overlay.add_tab_btn,
+            overlay.tabs_frame,
+            overlay.help_btn,
+            overlay.lock_btn,
+        )
     )
     tabs_frame_right = overlay.tabs_frame.winfo_x() + overlay.tabs_frame.winfo_width()
     assert tabs_frame_right <= title.winfo_x()

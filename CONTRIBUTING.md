@@ -27,7 +27,12 @@ sidenote/
     __main__.py           # Enables `pythonw -m sidenote`
     cli.py                # Command entry point (start/stop/status/upgrade/init)
     _upgrade.py           # Detached helper for `sidenote upgrade`
-    terminal_overlay.py   # tkinter UI, positioning, event handling
+    terminal_overlay.py   # TerminalOverlay: setup, lifecycle, entry-field state machine
+    overlay_ui.py          # Widget construction, help panel, tooltips, confirm popup
+    overlay_positioning.py # Terminal tracking, following, and the lock
+    overlay_tabs.py         # Tab create/rename/switch/delete
+    overlay_todos.py        # Todo add/edit/toggle/remove/reorder/undo
+    overlay_theme.py        # Colors, sizing constants, HELP_ROWS
     winutil.py            # Terminal detection, DPI, Win32 event hooks
     storage.py            # Load / migrate / atomically save todos
     lockfile.py           # PID-based single-instance lock
