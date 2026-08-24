@@ -41,6 +41,10 @@ Yes - drag its edge. It opens at 280px (scaled for your display's DPI), and a wi
 
 Height isn't adjustable: it tracks your terminal's height so the two stay flush. You can also drag the overlay away from the terminal by its title bar to place it manually; the lock button re-attaches it.
 
+**The text is too small. Can I make it bigger?**
+
+Yes - `Ctrl+` (or `Ctrl+=`) makes the list and entry text bigger, `Ctrl-` makes it smaller, from 7pt up to 20pt. Like the width, it resets to the default next time you start it.
+
 **Can I have more than one list?**
 
 Yes - up to 5 tabs. Click `+` in the top-left to add one; the entry field switches to naming mode, so type a name and press `Enter`. Switch tabs with the numbered buttons that appear next to `+`, and double-click a tab's name in the footer to rename it. A `×` appears next to the name once you have a second tab; it asks you to confirm before deleting that tab and everything in it.

@@ -5,7 +5,16 @@ and the listbox rendering / persistence that back them.
 import tkinter as tk
 
 from . import storage
-from .overlay_theme import COPY_FLASH, COPY_FLASH_MS, DONE_FG, ERROR_FG, FG, MUTED
+from .overlay_theme import (
+    COPY_FLASH,
+    COPY_FLASH_MS,
+    DONE_FG,
+    ERROR_FG,
+    FG,
+    MAX_FONT_SIZE,
+    MIN_FONT_SIZE,
+    MUTED,
+)
 
 
 class TodosMixin:
@@ -188,6 +197,26 @@ class TodosMixin:
             if todo.get("done"):
                 self.listbox.itemconfig(i, fg=DONE_FG, selectforeground=DONE_FG)
         self.update_counts()
+
+    def increase_font_size(self, event=None):
+        self._set_font_size(self._font_size + 1)
+        return "break"
+
+    def decrease_font_size(self, event=None):
+        self._set_font_size(self._font_size - 1)
+        return "break"
+
+    def _set_font_size(self, size):
+        size = max(MIN_FONT_SIZE, min(MAX_FONT_SIZE, size))
+        if size == self._font_size:
+            self.set_status(f"Text size: {size} (limit)")
+            return
+        self._font_size = size
+        # The entry stays one point larger than the list, matching how they
+        # were sized before text zoom existed.
+        self.listbox.config(font=("Consolas", size))
+        self.entry.config(font=("Consolas", size + 1))
+        self.set_status(f"Text size: {size}")
 
     def update_counts(self):
         done = sum(1 for t in self.todos if t.get("done"))

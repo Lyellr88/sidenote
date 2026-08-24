@@ -16,6 +16,7 @@ import tkinter as tk
 import pytest
 
 from sidenote import storage
+from sidenote.overlay_theme import MAX_FONT_SIZE, MIN_FONT_SIZE
 from sidenote.terminal_overlay import TerminalOverlay
 
 
@@ -152,6 +153,49 @@ def test_clear_done_and_undo_restores_all(overlay):
 
     overlay.undo()
     assert [t["text"] for t in overlay.todos] == ["keep", "done one", "done two"]
+
+
+def test_text_zoom_changes_and_clamps(overlay):
+    default_size = overlay._font_size
+    assert overlay.listbox.cget("font") == f"Consolas {default_size}"
+    assert overlay.entry.cget("font") == f"Consolas {default_size + 1}"
+
+    overlay.increase_font_size()
+    assert overlay._font_size == default_size + 1
+    assert overlay.listbox.cget("font") == f"Consolas {default_size + 1}"
+    assert overlay.entry.cget("font") == f"Consolas {default_size + 2}"
+
+    overlay.decrease_font_size()
+    assert overlay._font_size == default_size
+
+    for _ in range(30):
+        overlay.increase_font_size()
+    assert overlay._font_size == MAX_FONT_SIZE
+    overlay.increase_font_size()
+    assert overlay._font_size == MAX_FONT_SIZE  # clamped, doesn't keep climbing
+
+    for _ in range(40):
+        overlay.decrease_font_size()
+    assert overlay._font_size == MIN_FONT_SIZE
+    overlay.decrease_font_size()
+    assert overlay._font_size == MIN_FONT_SIZE  # clamped, doesn't keep shrinking
+
+
+def test_text_zoom_keys_work_regardless_of_focus(overlay):
+    default_size = overlay._font_size
+    overlay.root.update_idletasks()
+
+    overlay.entry.focus_set()
+    overlay.root.update()
+    overlay.root.event_generate("<Control-plus>")
+    overlay.root.update()
+    assert overlay._font_size == default_size + 1
+
+    overlay.listbox.focus_set()
+    overlay.root.update()
+    overlay.root.event_generate("<Control-minus>")
+    overlay.root.update()
+    assert overlay._font_size == default_size
 
 
 # -------------------------------------------------------------------- tabs

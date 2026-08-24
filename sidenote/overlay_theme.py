@@ -21,6 +21,12 @@ PUMP_MS = 40
 FALLBACK_POLL_MS = 2000
 REPOSITION_DEBOUNCE_MS = 60
 
+# The entry field is kept one point larger than the list - matches how they
+# were sized before text zoom existed.
+DEFAULT_LIST_FONT_SIZE = 9
+MIN_FONT_SIZE = 7
+MAX_FONT_SIZE = 20
+
 COPY_FLASH = ["#4ec9b0", "#3f9c88", "#317a6c"]
 COPY_FLASH_MS = 70
 
@@ -35,6 +41,7 @@ HELP_ROWS = [
     ("Delete", "Remove selected todo"),
     ("Ctrl+Delete", "Clear all checked-off todos"),
     ("Ctrl+Z", "Undo the last delete"),
+    ("Ctrl+ / Ctrl-", "Bigger / smaller text"),
     ("+ button", "Add a tab (up to 5)"),
     ("Double-click tab name", "Rename the current tab"),
     ("× next to tab name", "Delete the current tab, with confirmation"),

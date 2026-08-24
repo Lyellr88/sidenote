@@ -26,7 +26,7 @@ from . import storage, winutil
 from .lockfile import SingleInstance
 from .overlay_positioning import PositioningMixin
 from .overlay_tabs import TabsMixin
-from .overlay_theme import ACCENT, PUMP_MS
+from .overlay_theme import ACCENT, DEFAULT_LIST_FONT_SIZE, PUMP_MS
 from .overlay_todos import TodosMixin
 from .overlay_ui import OverlayUIMixin
 
@@ -61,6 +61,7 @@ class TerminalOverlay(OverlayUIMixin, PositioningMixin, TabsMixin, TodosMixin):
         self._edit_index = None
         self._undo_stack = []
         self._drag_from = None
+        self._font_size = DEFAULT_LIST_FONT_SIZE
 
         self.setup_window()
         self.setup_ui()

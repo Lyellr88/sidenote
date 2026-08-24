@@ -154,6 +154,13 @@ class OverlayUIMixin:
 
         self.root.bind_all("<Control-z>", self.undo)
 
+        # "+" is Shift+= on most keyboards, so Tk reports it as either
+        # keysym depending on layout - bind both, plus the numpad keys.
+        for sequence in ("<Control-plus>", "<Control-equal>", "<Control-KP_Add>"):
+            self.root.bind_all(sequence, self.increase_font_size)
+        for sequence in ("<Control-minus>", "<Control-KP_Subtract>"):
+            self.root.bind_all(sequence, self.decrease_font_size)
+
         footer = tk.Frame(self.root, bg=BAR_BG, height=30)
         footer.pack(fill=tk.X)
         footer.pack_propagate(False)

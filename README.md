@@ -32,6 +32,7 @@ This isn't about rich features but simplicity. It's about **zero-friction captur
 | **Smart Z-Order Sync** | When you click the terminal, todo comes forward with it |
 | **Movement Following** | Hides while you drag the terminal, snaps back when you stop |
 | **Resizable Width** | Drag it wider for longer notes; it stays that width as the terminal moves |
+| **Text Zoom** | `Ctrl+`/`Ctrl-` to make the text bigger or smaller |
 | **Check Things Off** | Double-click a todo to complete it, don't just delete it |
 | **Edit Todos** | Select one and press `Enter` to fix a typo without retyping it |
 | **Reorder Todos** | Drag one up or down to move it |
@@ -72,6 +73,7 @@ PowerShell profile.
 **Remove** - select it and press `Delete`.
 **Undo a delete** - `Ctrl+Z` brings back the last todo (or `Ctrl+Delete` batch) you removed.
 **Resize** - drag the edge to widen it for longer notes; the width sticks until you restart.
+**Zoom text** - `Ctrl+` (or `Ctrl+=`) makes it bigger, `Ctrl-` makes it smaller. Resets when you restart.
 **Add a tab** - click `+` in the top-left, type a name, press `Enter`. Up to 5.
 **Switch tabs** - click a numbered tab button next to `+`.
 **Rename a tab** - double-click its name in the footer, type a new one, press `Enter`.
@@ -93,6 +95,7 @@ The `?` button lists every action, so there's nothing to memorise.
 | `Delete` / `Backspace` | Remove selected todo |
 | `Ctrl+Delete` | Clear all checked-off todos |
 | `Ctrl+Z` | Undo the last delete |
+| `Ctrl+` / `Ctrl-` | Bigger / smaller text |
 | `Escape` | Hide overlay (or cancel naming a tab) |
 | 🔓 / 🔒 | Pin to one specific terminal |
 | `+` | Add a tab (up to 5) |

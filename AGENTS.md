@@ -45,6 +45,7 @@ Where a new method belongs: window chrome and dialogs → `overlay_ui.py`; anyth
 - Up to 5 tabs, each a separate todo list, added/renamed/switched/deleted from the header and footer, with a confirmation popup before deletion
 - `Ctrl+Z` undoes the last delete (single or `Ctrl+Delete` batch), per tab
 - Width is user-resizable by dragging; height stays matched to the terminal
+- `Ctrl+`/`Ctrl-` zooms the list and entry text between 7pt and 20pt; resets on restart
 - `?` button showing all quick actions
 - Lock button to stick to one specific terminal
 - Persistent storage at `~/.terminal_todos.json`
@@ -175,6 +176,7 @@ Manual checklist:
 - ✅ The footer `×` only appears with 2+ tabs; it asks for confirmation before deleting, and Cancel/Escape leave the tab alone; the keyboard Delete key confirms it, same as clicking the popup's Delete button
 - ✅ Deleting a tab you weren't on doesn't happen - only the active tab's `×` is reachable
 - ✅ `Ctrl+Delete` then `Ctrl+Z` restores the cleared todos; a single delete then `Ctrl+Z` restores that one
+- ✅ `Ctrl+` / `Ctrl-` grows/shrinks list and entry text together, clamps at both ends, and works whether the entry or the list has focus
 - ✅ Todos persist after restart, and a 1.0.x or pre-tabs (schema 2) file migrates cleanly
 - ✅ Lock button works, and survives the locked terminal being closed
 - ✅ Commands work from any directory
