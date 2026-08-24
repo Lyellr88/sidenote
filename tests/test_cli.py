@@ -13,8 +13,6 @@ from sidenote import cli, lockfile
 def isolated_lock(tmp_path, monkeypatch):
     """Point the CLI's lock helpers at a temp file, never the real one."""
     lock = tmp_path / "overlay.lock"
-    # Bind the originals first: cli.lockfile *is* the lockfile module, so
-    # referring to it after patching would recurse into the patch.
     real_running_pid = lockfile.running_pid
     real_clear = lockfile.clear
     monkeypatch.setattr(
@@ -118,8 +116,6 @@ def test_start_launches_the_package_module(isolated_lock, monkeypatch):
 
     assert launched, "expected the overlay to be launched"
     cmd = launched[0]
-    # -m keeps a single source of truth; the old code shelled out to a
-    # duplicated terminal_overlay.py sitting at the repo root.
     assert cmd[1:] == ["-m", "sidenote", "--show"]
 
 
@@ -180,7 +176,6 @@ ALL_HELP_ROWS = cli.COMMANDS + cli.OPTIONS + cli.HOTKEYS + cli.EXAMPLES
 @pytest.mark.parametrize("label,description", ALL_HELP_ROWS)
 def test_help_rows_are_aligned(label, description, capsys, monkeypatch):
     """Every description starts at the same column, or the listing looks ragged."""
-    # A label wider than the gutter would push its description out of line.
     assert len(label) < cli._GUTTER, f"{label!r} is too wide for the gutter"
 
     monkeypatch.setattr(sys, "argv", ["sidenote", "--help"])
@@ -330,10 +325,8 @@ def test_upgrade_hands_off_to_detached_helper(isolated_lock, monkeypatch, capsys
     assert len(launched) == 1, "expected exactly one helper process"
     cmd, kwargs = launched[0]
     assert cmd[1:3] == ["-m", "sidenote._upgrade"]
-    # The helper needs our PID so it can wait for us to exit.
     assert cmd[3] == str(os.getpid())
     assert kwargs["creationflags"] == cli.subprocess.CREATE_NEW_CONSOLE
-    # pip is never invoked directly from here.
     assert not any("pip" in str(part) for part in cmd)
 
 
@@ -387,7 +380,7 @@ def test_upgrade_reports_helper_launch_failure(isolated_lock, monkeypatch):
         ("upgrade", "upgrade"),
         ("init", "init"),
         ("start", "start"),
-        (None, "start"),  # bare `sidenote` starts the overlay
+        (None, "start"),
     ],
 )
 def test_main_dispatches_to_the_right_command(argument, expected, monkeypatch):

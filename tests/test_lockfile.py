@@ -88,7 +88,7 @@ def test_stale_lock_is_cleared_not_honoured(lock_path, sleeper):
 
 
 def test_clear_is_safe_when_absent(lock_path):
-    lockfile.clear(lock_path)  # must not raise
+    lockfile.clear(lock_path)
 
 
 # ------------------------------------------------------------- termination
@@ -99,7 +99,6 @@ def test_terminate_kills_only_the_target(sleeper):
     try:
         assert lockfile.terminate(sleeper.pid) is True
         sleeper.wait(timeout=5)
-        # The bystander is what `taskkill /IM python.exe` used to destroy.
         assert lockfile.is_overlay_pid(other.pid) is True
     finally:
         other.kill()

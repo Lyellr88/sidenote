@@ -25,9 +25,6 @@ DEFAULT_TAB_NAME = "Tab 1"
 _LEGACY_PREFIX = re.compile(r"^\[(\d{1,2}):(\d{2})\]\s*(.*)$", re.DOTALL)
 
 
-# Distinguishes "caller omitted created" from "created is genuinely unknown".
-# With a plain `created=None` default, `created or now()` stamped legacy entries
-# that never had a timestamp with the current time.
 _UNSET = object()
 
 
@@ -42,7 +39,10 @@ def new_todo(text, done=False, created=_UNSET):
 
 
 def new_tab(name=None, todos=None):
-    return {"name": name or DEFAULT_TAB_NAME, "todos": todos if todos is not None else []}
+    return {
+        "name": name or DEFAULT_TAB_NAME,
+        "todos": todos if todos is not None else [],
+    }
 
 
 def display(todo):
@@ -113,8 +113,6 @@ def load(path=DATA_FILE):
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        # Keep the unreadable file around instead of silently starting empty and
-        # overwriting it on the next save.
         return [new_tab()], 0, f"Could not read todos: {exc}"
 
     try:
@@ -135,8 +133,6 @@ def load(path=DATA_FILE):
             active = 0
         return tabs, active, None
 
-    # Pre-tabs file: a flat todo list (2.x), or a flat legacy string list
-    # (1.0.x) - either way it becomes the one tab.
     if isinstance(raw, dict):
         items = raw.get("todos", [])
     elif isinstance(raw, list):

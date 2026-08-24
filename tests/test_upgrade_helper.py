@@ -69,6 +69,27 @@ def test_helper_module_is_runnable():
     assert result.stdout.strip() == "sidenote"
 
 
+def test_pip_upgrade_bypasses_pips_cache(monkeypatch):
+    """Without --no-cache-dir, pip can trust stale local metadata and report
+    "Requirement already satisfied" for a version that's no longer latest -
+    `sidenote upgrade` would then claim success having upgraded nothing."""
+    captured = {}
+
+    class FakeResult:
+        returncode = 0
+
+    def fake_run(cmd):
+        captured["cmd"] = cmd
+        return FakeResult()
+
+    monkeypatch.setattr(_upgrade.subprocess, "run", fake_run)
+    monkeypatch.setattr(_upgrade, "_pause", lambda: None)
+    monkeypatch.setattr(sys, "argv", ["_upgrade.py"])  # no parent pid - skip the wait
+
+    assert _upgrade.main() == 0
+    assert "--no-cache-dir" in captured["cmd"]
+
+
 def test_helper_only_imports_stdlib_at_module_level():
     """pip rewrites this package mid-run, so nothing may be imported lazily."""
     source = __import__("pathlib").Path(_upgrade.__file__).read_text(encoding="utf-8")

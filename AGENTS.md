@@ -158,7 +158,7 @@ Manual checklist:
 - ✅ `+` adds a tab, capped at 5; the entry field switches to naming mode and back
 - ✅ Double-clicking the footer tab name renames it; `Escape` cancels a name in progress
 - ✅ The numbered tab buttons switch lists, and don't overlap the "Sidenote" title at 5 tabs
-- ✅ The footer `×` only appears with 2+ tabs; it asks for confirmation before deleting, and Cancel/Escape leave the tab alone
+- ✅ The footer `×` only appears with 2+ tabs; it asks for confirmation before deleting, and Cancel/Escape leave the tab alone; the keyboard Delete key confirms it, same as clicking the popup's Delete button
 - ✅ Deleting a tab you weren't on doesn't happen - only the active tab's `×` is reachable
 - ✅ `Ctrl+Delete` then `Ctrl+Z` restores the cleared todos; a single delete then `Ctrl+Z` restores that one
 - ✅ Todos persist after restart, and a 1.0.x or pre-tabs (schema 2) file migrates cleanly

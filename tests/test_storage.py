@@ -20,7 +20,7 @@ def test_new_todo_defaults():
     todo = storage.new_todo("write tests")
     assert todo["text"] == "write tests"
     assert todo["done"] is False
-    datetime.fromisoformat(todo["created"])  # parseable
+    datetime.fromisoformat(todo["created"])
 
 
 def test_new_tab_defaults():
@@ -63,7 +63,6 @@ def test_legacy_string_list_is_migrated(todo_file):
     todos = tabs[0]["todos"]
     assert [t["text"] for t in todos] == ["Fix the login bug", "Ship it"]
     assert all(t["done"] is False for t in todos)
-    # Time is preserved from the old prefix; date comes from the file's mtime.
     assert datetime.fromisoformat(todos[0]["created"]).strftime("%H:%M") == "14:23"
     assert datetime.fromisoformat(todos[1]["created"]).strftime("%H:%M") == "09:05"
 
@@ -85,7 +84,10 @@ def test_legacy_migration_keeps_text_containing_brackets(todo_file):
 
 def test_flat_v2_todo_list_becomes_one_tab(todo_file):
     """A pre-tabs (schema 2) file has no "tabs" key at all."""
-    payload = {"version": 2, "todos": [{"text": "old style", "created": None, "done": False}]}
+    payload = {
+        "version": 2,
+        "todos": [{"text": "old style", "created": None, "done": False}],
+    }
     todo_file.write_text(json.dumps(payload))
     tabs, active, error = storage.load(todo_file)
 
@@ -103,7 +105,6 @@ def test_corrupt_file_reports_error_and_preserves_file(todo_file):
     assert tabs[0]["todos"] == []
     assert active == 0
     assert error is not None
-    # The unreadable file must survive so the user can recover it by hand.
     assert todo_file.exists()
     assert todo_file.read_text() == "{not valid json"
 
@@ -182,8 +183,6 @@ def test_save_leaves_no_temp_files_behind(todo_file):
 
 
 def test_save_reports_error_instead_of_raising(tmp_path):
-    # A directory where the file should be: save must report, never explode,
-    # because a silent failure loses todos with no warning.
     target = tmp_path / "todos.json"
     target.mkdir()
     error = storage.save([storage.new_tab("Tab 1", [storage.new_todo("a")])], 0, target)

@@ -20,14 +20,12 @@ from .lockfile import SingleInstance
 BG = "#1e1e1e"
 BAR_BG = "#2d2d30"
 LIST_BG = "#252526"
-# Just enough lift off LIST_BG to locate the selection without it grabbing the eye.
 SELECT_BG = "#2f3033"
 FG = "#cccccc"
 MUTED = "#858585"
 DONE_FG = "#6a6a6a"
 ERROR_FG = "#f48771"
 LOCKED_BG = "#8b0000"
-# Marks the entry field while it's naming/renaming a tab instead of adding a todo.
 ACCENT = "#60a5fa"
 
 BASE_WIDTH = 280
@@ -35,7 +33,6 @@ PUMP_MS = 40
 FALLBACK_POLL_MS = 2000
 REPOSITION_DEBOUNCE_MS = 60
 
-# Steps a copied row fades through on its way back to normal.
 COPY_FLASH = ["#4ec9b0", "#3f9c88", "#317a6c"]
 COPY_FLASH_MS = 70
 
@@ -82,7 +79,6 @@ class TerminalOverlay:
         self._scale = 1.0
         self._user_width = None
         self._applied_w = None
-        # "todo" | "new_tab" | "rename_tab" - what Enter in the entry field does.
         self._entry_mode = "todo"
         self._undo_stack = []
         self._drag_from = None
@@ -122,12 +118,9 @@ class TerminalOverlay:
         self.add_tab_btn.pack(side=tk.LEFT)
         self.add_tab_btn.bind("<Button-1>", lambda e: self.start_new_tab())
 
-        # Populated by _render_tabs() once a second tab exists.
         self.tabs_frame = tk.Frame(drag_bar, bg=BAR_BG)
         self.tabs_frame.pack(side=tk.LEFT)
 
-        # Packed right-to-left: lock lands at the far edge, help lands just
-        # left of it.
         self.lock_btn = tk.Label(
             drag_bar,
             text="\U0001f513",
@@ -155,8 +148,6 @@ class TerminalOverlay:
         self.help_btn.pack(side=tk.RIGHT)
         self.help_btn.bind("<Button-1>", lambda e: self.toggle_help())
 
-        # place(), not pack(): the buttons on either side are different widths,
-        # so packing the title into what's left between them centres it off-centre.
         title = tk.Label(
             drag_bar,
             text="Sidenote",
@@ -191,21 +182,15 @@ class TerminalOverlay:
         list_container = tk.Frame(self.root, bg=BG)
         list_container.pack(fill=tk.BOTH, expand=True, padx=8, pady=0)
 
-        # No scrollbar: the list still scrolls by wheel, and by arrow keys once
-        # a row is selected.
         self.listbox = tk.Listbox(
             list_container,
             bg=LIST_BG,
             fg=FG,
             selectbackground=SELECT_BG,
-            # Empty means "keep the row's own colour", so selecting a done todo
-            # doesn't wash out its grey, and the copy flash still shows.
             selectforeground="",
             relief="flat",
             font=("Consolas", 9),
             bd=0,
-            # Default is a 1px SystemButtonFace ring, which reads as a white
-            # border whenever the list doesn't have focus.
             highlightthickness=0,
             activestyle="none",
         )
@@ -220,9 +205,6 @@ class TerminalOverlay:
         self.listbox.bind("<Control-Delete>", self.clear_done)
         self.listbox.bind("<Escape>", lambda e: self.hide())
 
-        # Drag-to-reorder: press records the row, motion moves it live, release
-        # persists it. These run alongside (not instead of) the Listbox's own
-        # click-to-select and double-click-to-toggle handling.
         self.listbox.bind("<Button-1>", self._on_list_press)
         self.listbox.bind("<B1-Motion>", self._on_list_drag)
         self.listbox.bind("<ButtonRelease-1>", self._on_list_release)
@@ -246,15 +228,19 @@ class TerminalOverlay:
         self.tab_label.pack(side=tk.LEFT, fill=tk.Y)
         self.tab_label.bind("<Double-Button-1>", lambda e: self.start_rename_tab())
 
-        # Only packed once a second tab exists - see _update_tab_label(). You
-        # can't delete the one tab that's left.
         self.delete_tab_btn = tk.Label(
             footer, text="×", fg=MUTED, bg=BAR_BG, cursor="hand2", font=("Consolas", 10)
         )
         self.delete_tab_btn.bind("<Button-1>", lambda e: self._confirm_delete_tab())
 
         self.status = tk.Label(
-            footer, text="", fg=MUTED, bg=BAR_BG, font=("Consolas", 8), anchor="e", padx=8
+            footer,
+            text="",
+            fg=MUTED,
+            bg=BAR_BG,
+            font=("Consolas", 8),
+            anchor="e",
+            padx=8,
         )
         self.status.pack(side=tk.RIGHT, fill=tk.Y)
 
@@ -417,13 +403,8 @@ class TerminalOverlay:
             winutil.window_metrics(own) if own else (0, 0, 0, 0)
         )
 
-        # Scale to the terminal's monitor instead of assuming 96 DPI.
         self._apply_scaling(winutil.dpi_for_window(terminal))
 
-        # tk sizes the client area and positions the *window* rect, so subtract
-        # this window's chrome and shift by its invisible border to make the
-        # visible edges sit flush against the terminal. A width the user dragged
-        # is already a client width, so it needs no such adjustment.
         if self._user_width:
             client_w = max(120, self._user_width)
         else:
@@ -572,7 +553,6 @@ class TerminalOverlay:
         panel.update_idletasks()
         x = self.help_btn.winfo_rootx()
         y = self.help_btn.winfo_rooty() + self.help_btn.winfo_height() + 2
-        # Keep the panel on screen when the overlay sits near a screen edge.
         max_x = self.root.winfo_screenwidth() - panel.winfo_reqwidth() - 4
         panel.wm_geometry(f"+{max(4, min(x, max_x))}+{y}")
 
@@ -604,7 +584,9 @@ class TerminalOverlay:
         self.entry.insert(0, text)
         self.entry.select_range(0, tk.END)
         self.entry.icursor(tk.END)
-        self.entry.config(highlightthickness=2, highlightbackground=ACCENT, highlightcolor=ACCENT)
+        self.entry.config(
+            highlightthickness=2, highlightbackground=ACCENT, highlightcolor=ACCENT
+        )
         self.entry.focus_set()
 
     def _leave_entry_mode(self):
@@ -670,8 +652,6 @@ class TerminalOverlay:
                 bg=SELECT_BG if active else BAR_BG,
                 fg=FG if active else MUTED,
                 cursor="hand2",
-                # Tight padding: at 5 tabs this row sits right next to the
-                # centred title, and any wider risks overlapping it.
                 font=("Consolas", 8, "bold" if active else "normal"),
                 padx=2,
             )
@@ -691,15 +671,15 @@ class TerminalOverlay:
         else:
             detail = f"{count} todos go with it."
         self._show_confirm(
-            f'Delete "{name}"? {detail}', lambda: self._delete_tab(index), self.delete_tab_btn
+            f'Delete "{name}"? {detail}',
+            lambda: self._delete_tab(index),
+            self.delete_tab_btn,
         )
 
     def _delete_tab(self, index):
         if len(self.tabs) <= 1 or not (0 <= index < len(self.tabs)):
             return
         del self.tabs[index]
-        # Undo entries point at a tab by index; the deleted tab's entries no
-        # longer have anywhere to go, and later tabs shift down by one.
         self._undo_stack = [
             (i - 1 if i > index else i, snapshot)
             for i, snapshot in self._undo_stack
@@ -769,6 +749,7 @@ class TerminalOverlay:
         panel.wm_geometry(f"+{max(4, min(x, max_x))}+{max(4, y)}")
 
         panel.bind("<Escape>", lambda e: self._hide_confirm())
+        panel.bind("<Delete>", confirm)
         panel.focus_set()
         self._confirm_window = panel
 
@@ -812,8 +793,6 @@ class TerminalOverlay:
             else:
                 colour = DONE_FG if self.todos[index].get("done") else FG
             try:
-                # selectforeground too, or the flash is invisible on the
-                # selected row: Tk draws that one with the select colour.
                 self.listbox.itemconfig(index, fg=colour, selectforeground=colour)
             except tk.TclError:
                 return
@@ -862,9 +841,6 @@ class TerminalOverlay:
             self.set_status("Nothing checked off yet")
             return "break"
         self._push_undo()
-        # Slice-assign, not rebind: self.todos is the same list object as
-        # self.tabs[self.active_tab]["todos"], and a plain `self.todos = ...`
-        # would break that alias.
         self.todos[:] = remaining
         self.refresh_list()
         self.save_todos()
@@ -917,8 +893,6 @@ class TerminalOverlay:
             index = self.listbox.nearest(event.y)
             if index < 0 or index >= len(self.todos):
                 return None
-            # nearest() clamps to the closest row, so reject clicks below the
-            # last item instead of toggling whatever happens to be at the end.
             bbox = self.listbox.bbox(index)
             if not bbox or event.y > bbox[1] + bbox[3]:
                 return None
@@ -952,8 +926,6 @@ class TerminalOverlay:
     def save_todos(self):
         error = storage.save(self.tabs, self.active_tab)
         if error:
-            # Previously swallowed: a full or read-only disk meant todos stopped
-            # persisting with no sign of it until a restart lost them.
             self.set_status(error, error=True)
         else:
             self.update_counts()
@@ -1005,8 +977,6 @@ class TerminalOverlay:
             try:
                 import keyboard
 
-                # The callback runs on the keyboard library's thread, so hand
-                # the toggle back to the main thread rather than calling it here.
                 keyboard.add_hotkey(
                     "shift+tab", lambda: self._post(self.toggle), suppress=False
                 )

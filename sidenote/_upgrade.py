@@ -60,15 +60,14 @@ def main():
             print()
             print("Timed out waiting for the previous sidenote process to exit.")
             print("Close any terminal running sidenote, then run:")
-            print(f"  python -m pip install --upgrade {PACKAGE}")
+            print(f"  python -m pip install --upgrade --no-cache-dir {PACKAGE}")
             _pause()
             return 1
-        # Windows can hold the image lock a moment past process exit.
         time.sleep(0.5)
 
     print()
     result = subprocess.run(
-        [sys.executable, "-m", "pip", "install", "--upgrade", PACKAGE]
+        [sys.executable, "-m", "pip", "install", "--upgrade", "--no-cache-dir", PACKAGE]
     )
 
     print()

@@ -16,7 +16,6 @@ from pathlib import Path
 
 LOCK_FILE = Path(os.path.expanduser("~")) / ".terminal_overlay.lock"
 
-# Enough rights to query status and image name without needing elevation.
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 PROCESS_TERMINATE = 0x0001
 SYNCHRONIZE = 0x00100000
@@ -25,8 +24,6 @@ WAIT_OBJECT_0 = 0
 
 _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
-# Declare signatures explicitly: ctypes defaults every return value to C int,
-# which truncates 64-bit HANDLEs and silently corrupts them.
 _kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
 _kernel32.OpenProcess.restype = wintypes.HANDLE
 _kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
@@ -144,8 +141,6 @@ class SingleInstance:
         return False
 
     def release(self):
-        # Only remove the lock if it is still ours; otherwise a newer instance
-        # that reclaimed a stale lock would get its lock deleted out from under it.
         if self.locked and read_pid(self.lock_file) == os.getpid():
             clear(self.lock_file)
         self.locked = False

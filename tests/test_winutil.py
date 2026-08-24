@@ -13,8 +13,6 @@ from sidenote import winutil
 
 
 def test_terminal_exe_list_is_lowercase():
-    # process_name() lowercases before comparing; an uppercase entry here would
-    # silently never match.
     assert all(name == name.lower() for name in winutil.TERMINAL_EXES)
 
 
@@ -86,7 +84,7 @@ def test_is_terminal_excludes_our_own_process():
 
 def test_dpi_for_window_has_sane_fallback():
     assert winutil.dpi_for_window(win32gui.GetDesktopWindow()) >= 96
-    assert winutil.dpi_for_window(0) == 96  # invalid hwnd -> documented default
+    assert winutil.dpi_for_window(0) == 96
 
 
 def test_visible_rect_is_within_window_rect():
@@ -112,15 +110,12 @@ def test_event_listener_filters_non_window_events():
     seen = []
     listener = winutil.WindowEventListener(lambda event, hwnd: seen.append(hwnd))
 
-    # idObject != OBJID_WINDOW - must be ignored
     listener._dispatch(None, winutil.EVENT_OBJECT_LOCATIONCHANGE, 999, -8, 0, 0, 0)
     assert seen == []
 
-    # idChild != 0 - must be ignored
     listener._dispatch(None, winutil.EVENT_OBJECT_LOCATIONCHANGE, 999, 0, 3, 0, 0)
     assert seen == []
 
-    # a genuine window event - must pass through
     listener._dispatch(None, winutil.EVENT_OBJECT_LOCATIONCHANGE, 999, 0, 0, 0, 0)
     assert seen == [999]
 

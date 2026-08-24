@@ -37,7 +37,6 @@ def _pythonw():
     candidate = exe.with_name("pythonw.exe")
     if candidate.exists():
         return str(candidate)
-    # Fall back to the console interpreter; a console window may flash briefly.
     return str(exe)
 
 
@@ -195,7 +194,9 @@ def upgrade():
         )
     except OSError as exc:
         _say(f"✗ Could not start the upgrade helper: {exc}")
-        _say("  Run this instead: python -m pip install --upgrade sidenote")
+        _say(
+            "  Run this instead: python -m pip install --upgrade --no-cache-dir sidenote"
+        )
         sys.exit(1)
 
     _say("")
@@ -203,8 +204,6 @@ def upgrade():
 
 
 PROFILE_MARKER = "# Sidenote"
-# Profiles written before the rename carry the old marker. Detection has to
-# recognise both, or `init` appends a second block to an existing profile.
 LEGACY_PROFILE_MARKER = "# CLI Sidenote"
 
 PROFILE_BLOCK = f"""
@@ -264,8 +263,6 @@ def init():
 TAGLINE = "Sidenote - a zero-friction todo overlay for your terminal"
 DOCS_URL = "https://github.com/lyellr88/sidenote"
 
-# Single source of truth: the help listing, argparse's `choices`, and the
-# dispatch table are all derived from this, so they cannot drift apart.
 COMMANDS = [
     ("start", "Start the overlay (default when no command is given)"),
     ("stop", "Stop the overlay"),
@@ -333,7 +330,7 @@ def _format_help():
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="sidenote",  # otherwise argparse shows the full python.exe path
+        prog="sidenote",
         usage="sidenote [command] [options]",
         description=TAGLINE,
         add_help=False,

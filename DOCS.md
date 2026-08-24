@@ -128,6 +128,10 @@ The status bar at the bottom of the overlay shows the reason - usually permissio
 
 Close any other terminal that's running a `sidenote` command and try again. Windows locks a running executable, and pip can't replace a file that's in use.
 
+**`sidenote upgrade` says "Upgrade complete" but `sidenote --version` hasn't changed**
+
+Check the upgrade window's output for `Requirement already satisfied` next to every package. That means pip trusted its local cache instead of checking PyPI, so it saw nothing to do and exited without error - `sidenote upgrade` reports that as success because pip itself reported success. Run the manual command above with `--no-cache-dir` to force a real check.
+
 ---
 
 ## How It Works
@@ -197,8 +201,10 @@ The manual equivalent:
 
 ```powershell
 sidenote stop
-python -m pip install --upgrade sidenote
+python -m pip install --upgrade --no-cache-dir sidenote
 ```
+
+`--no-cache-dir` matters here: without it, pip can trust locally cached metadata and report "Requirement already satisfied" for a version that's no longer the latest, instead of fetching the new release.
 
 If you installed from a clone, `sidenote upgrade` will say so and stop, since pulling from PyPI would overwrite your working copy. Use git instead:
 

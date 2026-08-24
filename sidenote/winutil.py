@@ -20,7 +20,6 @@ import win32con
 import win32gui
 import win32process
 
-# Executables whose windows count as "a terminal".
 TERMINAL_EXES = {
     "windowsterminal.exe",
     "wt.exe",
@@ -52,13 +51,13 @@ _dwmapi = ctypes.WinDLL("dwmapi", use_last_error=True)
 
 _WinEventProc = ctypes.WINFUNCTYPE(
     None,
-    wintypes.HANDLE,  # hWinEventHook
-    wintypes.DWORD,  # event
-    wintypes.HWND,  # hwnd
-    wintypes.LONG,  # idObject
-    wintypes.LONG,  # idChild
-    wintypes.DWORD,  # dwEventThread
-    wintypes.DWORD,  # dwmsEventTime
+    wintypes.HANDLE,
+    wintypes.DWORD,
+    wintypes.HWND,
+    wintypes.LONG,
+    wintypes.LONG,
+    wintypes.DWORD,
+    wintypes.DWORD,
 )
 
 _user32.SetWinEventHook.argtypes = [
@@ -193,7 +192,6 @@ def find_terminal(own_pid=None):
         win32gui.EnumWindows(callback, found)
     except Exception:
         return None
-    # EnumWindows walks front-to-back, so the first hit is the topmost terminal.
     return found[0] if found else None
 
 
@@ -279,14 +277,10 @@ class WindowEventListener:
     def __init__(self, callback):
         self.callback = callback
         self._thread = None
-        # Held on the instance so the callback trampoline isn't garbage
-        # collected while Windows still holds a pointer to it.
         self._proc = _WinEventProc(self._dispatch)
         self._hooks = []
 
     def _dispatch(self, hook, event, hwnd, id_object, id_child, thread_id, time_ms):
-        # LOCATIONCHANGE also fires for carets and cursors; only window-level
-        # events are meaningful here.
         if id_object != OBJID_WINDOW or id_child != 0:
             return
         if not hwnd:
@@ -314,7 +308,6 @@ class WindowEventListener:
             if hook:
                 self._hooks.append(hook)
 
-        # Hooks only fire while this thread pumps messages.
         msg = wintypes.MSG()
         while _user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
             _user32.TranslateMessage(ctypes.byref(msg))
