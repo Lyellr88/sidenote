@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sidenote"
-version = "1.4.0"
+version = "1.4.1"
 description = "A zero-friction todo overlay for your terminal. Built for ADHD developers."
 readme = "README.md"
 # 3.9 is the floor CI tests (oldest job in the matrix). cli.py also needs

@@ -4,6 +4,8 @@ All notable changes to Sidenote are documented here. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-04
+
 ### Changed
 
 - Python 3.9 is now the minimum supported version (`requires-python = ">=3.9"`). The 3.7 and 3.8 classifiers are gone.
@@ -103,7 +105,8 @@ All notable changes to Sidenote are documented here. The format follows [Keep a 
 - Commands: `sidenote`, `sidenote stop`, `sidenote status`, `sidenote version`, and `sidenote upgrade`.
 - Thread-safe UI updates, PID-based process termination, process-based terminal detection, stale lock recovery, DPI awareness, and tests for storage, the lockfile, terminal detection, and the CLI.
 
-[Unreleased]: https://github.com/Lyellr88/sidenote/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/Lyellr88/sidenote/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/Lyellr88/sidenote/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/Lyellr88/sidenote/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/Lyellr88/sidenote/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/Lyellr88/sidenote/compare/v1.3.0...v1.3.1
