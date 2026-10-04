@@ -1,0 +1,31 @@
+name: PR Labels
+
+# Every pull request needs a label that sorts it into a release-note section
+# (see .github/release.yml), or `skip-changelog` to leave it out.
+# Dependabot pull requests are labeled automatically by dependabot.yml.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  label-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require a release-note label
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          allowed=",breaking,security,enhancement,bug,performance,documentation,dependencies,ci,chore,skip-changelog,"
+          IFS=',' read -ra labels <<< "$LABELS"
+          for label in "${labels[@]}"; do
+            if [[ "$allowed" == *",$label,"* ]]; then
+              echo "Release-note label found: $label"
+              exit 0
+            fi
+          done
+          echo "::error::Add one label: breaking, security, enhancement, bug, performance, documentation, dependencies, ci, chore, or skip-changelog."
+          exit 1

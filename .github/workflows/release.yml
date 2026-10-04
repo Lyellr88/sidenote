@@ -1,0 +1,207 @@
+name: Release
+
+# Pushing a tag like v1.5.0 is the only thing that publishes to PyPI.
+# Order: preflight -> build -> draft release -> publish -> finalize -> verify.
+# The GitHub Release stays a draft until PyPI accepted the upload, so a failure
+# can still be fixed before an immutable release locks the tag.
+# Pre-release tags such as v1.5.0-rc.1 publish as PEP 440 pre-releases (1.5.0rc1).
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      pep440: ${{ steps.check.outputs.pep440 }}
+      prerelease: ${{ steps.check.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: check
+        env:
+          TAG: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag $TAG is not a semantic version such as v1.2.3"
+            exit 1
+          fi
+          version="${TAG#v}"
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT_BRANCH"; then
+            echo "::error::$TAG points at a commit that is not on $DEFAULT_BRANCH. Tag a merged commit."
+            exit 1
+          fi
+
+          # PyPI versions follow PEP 440, so 1.5.0-rc.1 is written 1.5.0rc1 in the manifests.
+          prerelease=false
+          if [[ "$version" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-(alpha|beta|rc)\.([0-9]+)$ ]]; then
+            case "${BASH_REMATCH[2]}" in
+              alpha) pre=a ;;
+              beta) pre=b ;;
+              rc) pre=rc ;;
+            esac
+            pep440="${BASH_REMATCH[1]}${pre}${BASH_REMATCH[3]}"
+            prerelease=true
+          elif [[ "$version" == *-* ]]; then
+            echo "::error::Pre-release tags must look like v1.5.0-alpha.1, v1.5.0-beta.1 or v1.5.0-rc.1"
+            exit 1
+          else
+            pep440="$version"
+          fi
+
+          pyproject_version="$(python3 -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")"
+          init_version="$(sed -n 's/^__version__ = "\(.*\)"[[:space:]]*$/\1/p' sidenote/__init__.py | tr -d '\r')"
+          if [ "$pyproject_version" != "$pep440" ]; then
+            echo "::error::Tag $TAG means $pep440 but pyproject.toml says $pyproject_version. Bump pyproject.toml or fix the tag."
+            exit 1
+          fi
+          if [ "$init_version" != "$pep440" ]; then
+            echo "::error::Tag $TAG means $pep440 but sidenote/__init__.py says $init_version. Bump __version__ or fix the tag."
+            exit 1
+          fi
+
+          {
+            echo "version=$version"
+            echo "pep440=$pep440"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: preflight
+    runs-on: windows-latest
+    timeout-minutes: 20
+    # Provenance needs these three, and only this job gets them.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Build
+        run: |
+          pip install build twine
+          python -m build
+          twine check dist/*
+      - name: Smoke test the built wheel
+        shell: bash
+        env:
+          EXPECTED: ${{ needs.preflight.outputs.pep440 }}
+        run: |
+          python -m venv smoke
+          smoke/Scripts/python -m pip install dist/*.whl
+          actual="$(smoke/Scripts/sidenote --version)"
+          echo "$actual"
+          [ "$actual" = "sidenote $EXPECTED" ]
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: "dist/*"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  draft-release:
+    needs: [preflight, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Create the draft release (skipped on re-run if it already exists)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ needs.preflight.outputs.prerelease }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; leaving it as is."
+            exit 0
+          fi
+          flags=(--draft --verify-tag --generate-notes --title "Sidenote ${TAG#v}")
+          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" "${flags[@]}"
+
+  publish-pypi:
+    needs: [build, draft-release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: pypi
+      url: https://pypi.org/p/sidenote
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        with:
+          skip-existing: true
+
+  finalize:
+    needs: [preflight, publish-pypi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+          path: dist/
+      - name: Attach artifacts and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ needs.preflight.outputs.prerelease }}
+        run: |
+          gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          if [ "$PRERELEASE" = "true" ]; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+          else
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          fi
+
+  verify:
+    needs: [preflight, finalize]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Confirm the new version is live on PyPI
+        env:
+          VERSION: ${{ needs.preflight.outputs.pep440 }}
+        run: |
+          for attempt in $(seq 1 10); do
+            if curl -fsS "https://pypi.org/pypi/sidenote/$VERSION/json" >/dev/null; then
+              echo "sidenote $VERSION is live on PyPI."
+              exit 0
+            fi
+            echo "Not visible yet (attempt $attempt); waiting 30s"
+            sleep 30
+          done
+          echo "::error::sidenote $VERSION did not appear on PyPI. Check the registry before announcing the release."
+          exit 1

@@ -3,7 +3,7 @@
 > A lightweight, ADHD-friendly todo list that lives right next to your terminal window
 
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
-![Python](https://img.shields.io/badge/python-3.7+-green)
+![Python](https://img.shields.io/badge/python-3.9+-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 [![PyPI](https://img.shields.io/pypi/v/sidenote)](https://pypi.org/project/sidenote/)
 
@@ -61,7 +61,7 @@ Optionally, `sidenote init` adds `start-note` / `stop-note` shortcuts to your
 PowerShell profile.
 
 > If `sidenote` isn't found after installing, your Python Scripts folder isn't on
-> PATH - see [Troubleshooting](https://github.com/lyellr88/sidenote/blob/main/DOCS.md#troubleshooting).
+> PATH - see [Troubleshooting](https://github.com/lyellr88/sidenote/blob/master/DOCS.md#troubleshooting).
 
 ## Usage
 
@@ -117,17 +117,21 @@ notebooks, and training runs are never touched.
 
 ## Requirements
 
-Windows 10/11, Python 3.7+, and a terminal (PowerShell, CMD, or Windows Terminal). Pulls in two small libraries: `keyboard` and `pywin32`.
+Windows 10/11, Python 3.9 or newer (tested on 3.9 and 3.13), and a terminal (PowerShell, CMD, or Windows Terminal). Pulls in two small libraries: `keyboard` and `pywin32`.
+
+## How Releases Are Made
+
+A release happens when a maintainer pushes a version tag such as `v1.5.0`. GitHub Actions then checks that the tag matches the package version, builds the package, publishes it to PyPI through trusted publishing (no stored token), and publishes the GitHub Release with generated notes. Merging a pull request never publishes on its own. What shipped in each version is listed in [CHANGELOG.md](https://github.com/lyellr88/sidenote/blob/master/CHANGELOG.md) and on the [Releases page](https://github.com/Lyellr88/sidenote/releases).
 
 ## Documentation
 
-**[Full documentation →](https://github.com/lyellr88/sidenote/blob/main/DOCS.md)**
+**[Full documentation →](https://github.com/lyellr88/sidenote/blob/master/DOCS.md)**
 
 FAQ · Troubleshooting · How it works · Data format · Upgrading · Uninstalling · Development
 
 ## Contributing
 
-Happy to take PRs for bug fixes, better terminal detection, performance, or cross-platform support. Run `pytest` first, and add a test if you're fixing a bug. See [CONTRIBUTING.md](https://github.com/lyellr88/sidenote/blob/main/CONTRIBUTING.md).
+Happy to take PRs for bug fixes, better terminal detection, performance, or cross-platform support. Run `pytest` first, and add a test if you're fixing a bug. See [CONTRIBUTING.md](https://github.com/lyellr88/sidenote/blob/master/CONTRIBUTING.md).
 
 ## License
 

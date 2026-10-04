@@ -1,41 +1,90 @@
 name: CI
 
-# Push to master only - not run on pull requests.
+# Runs on every pull request and on pushes to master. Publishing lives in
+# release.yml and only happens when a version tag is pushed.
 on:
+  pull_request:
   push:
     branches: [master]
+  workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# No `paths:` filter: `ci-ok` is a required status check, and a path-filtered
+# workflow that never starts would leave it pending forever.
 jobs:
-  test:
+  lint:
     runs-on: windows-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          python-version: "3.x"
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - name: Install dependencies
         run: pip install -e ".[dev]"
       - name: Lint
         run: ruff check .
+
+  # Windows only on purpose: the overlay depends on pywin32, keyboard and tkinter.
+  # 3.9 is the oldest supported Python (requires-python), 3.13 the newest.
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
       - name: Run tests
         run: pytest
 
-  publish:
-    needs: test
-    runs-on: windows-latest
+  lint-workflows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          python-version: "3.x"
-      - name: Install build tools
-        run: pip install build twine
-      - name: Build
-        run: python -m build
-      - name: Check distributions
-        run: twine check dist/*
-      - name: Publish to PyPI
+          persist-credentials: false
+      - name: actionlint
+        uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
+        with:
+          args: -color
+
+  # One stable name for the branch ruleset to require, whatever the matrix looks like.
+  ci-ok:
+    if: ${{ always() }}
+    needs: [lint, test, lint-workflows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail unless every job succeeded
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload --skip-existing dist/*
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != "success" ]; then
+              echo "::error::At least one required job did not succeed."
+              exit 1
+            fi
+          done
