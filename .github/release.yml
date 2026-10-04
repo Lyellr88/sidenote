@@ -1,0 +1,40 @@
+# .github/release.yml
+# Sorts merged pull requests into release-note sections by label.
+# A pull request lands in the FIRST category it matches, so keep the order.
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+      - duplicate
+      - invalid
+      - question
+      - wontfix
+  categories:
+    - title: Breaking Changes
+      labels:
+        - breaking
+    - title: Security
+      labels:
+        - security
+    - title: Features
+      labels:
+        - enhancement
+    - title: Fixes
+      labels:
+        - bug
+    - title: Performance
+      labels:
+        - performance
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Dependencies
+      labels:
+        - dependencies
+    - title: CI and Tooling
+      labels:
+        - ci
+        - chore
+    - title: Other Changes
+      labels:
+        - "*"

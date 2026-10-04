@@ -264,7 +264,7 @@ pytest
 
 The suite covers storage, the PID lock's liveness and PID-reuse handling, window-detection invariants, CLI behaviour, and - via `tests/test_overlay_smoke.py` - the tkinter overlay itself, driven headlessly. A small manual checklist in [AGENTS.md](AGENTS.md) covers what that doesn't reach, and documents the invariants that are easy to break by accident.
 
-A GitHub Actions workflow runs the suite on every push to `master` and publishes to PyPI on success; see [AGENTS.md](AGENTS.md#ci).
+A GitHub Actions workflow lints and tests every pull request and every push to `master`, on Python 3.9 and 3.13. Publishing to PyPI happens only when a version tag (`vX.Y.Z`) is pushed; see [AGENTS.md](AGENTS.md#ci) and the release steps in [CONTRIBUTING.md](CONTRIBUTING.md#publishing-maintainers-only).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
 

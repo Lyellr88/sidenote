@@ -103,7 +103,7 @@ Route CLI prints through `cli._say()`. Bare `print("✓")` raises `UnicodeEncode
 2. `sidenote/__init__.py` - `__version__`
 3. `README.md` - Title if major version changes
 
-`test_source_version_matches_pyproject` fails if 1 and 2 drift apart. Published versions are immutable on PyPI, so any change after a release needs a new number. `cli._version()` reads installed metadata first and falls back to `__version__` for source checkouts that were never pip-installed.
+`test_source_version_matches_pyproject` fails if 1 and 2 drift apart, and the release workflow's preflight refuses a tag that disagrees with either. Published versions are immutable on PyPI, so any change after a release needs a new number. `cli._version()` reads installed metadata first and falls back to `__version__` for source checkouts that were never pip-installed.
 
 **Documentation split:**
 `README.md` is the short front page and is what PyPI renders - keep it lean. Everything else (FAQ, troubleshooting, internals, upgrade/uninstall detail, dev setup) lives in `DOCS.md`. Links from `README.md` to other repo files **must be absolute GitHub URLs**: relative links resolve against pypi.org and 404 there.
@@ -202,6 +202,19 @@ When a new `except Exception:` shows up: check what the wrapped call can actuall
 
 ## CI
 
-`.github/workflows/ci.yml` runs on push to `master` only - not on pull requests. It runs `ruff check .` then `pytest`, then on success builds and publishes to PyPI with `twine upload --skip-existing`. `--skip-existing` matters: without it, any push that didn't bump the version would fail the publish step every time, since PyPI rejects re-uploading a version that already exists - skipping it quietly is correct, since the version number is what decides whether there's anything new to ship. Publishing needs a `PYPI_API_TOKEN` repository secret; without one, the publish job fails harmlessly and tests still ran.
+`.github/workflows/ci.yml` runs on every pull request and every push to `master`. Jobs: `lint` (`ruff check .` on Python 3.13), `test` (`pytest` on Python 3.9 and 3.13), `lint-workflows` (actionlint), and `ci-ok`, which fails unless the other three succeeded. `ci-ok` is the single required status check in the branch ruleset, so do not rename it. Everything runs on `windows-latest` except actionlint and `ci-ok`, because the app needs pywin32, `keyboard`, and tkinter. CI no longer publishes anything.
+
+`.github/workflows/release.yml` publishes, and only runs when a tag like `v1.5.0` is pushed. `preflight` checks the tag is semver, sits on `master`, and equals the version in **both** `pyproject.toml` and `sidenote/__init__.py` (a pre-release tag such as `v1.5.0-rc.1` is compared as `1.5.0rc1`, the PEP 440 spelling). It then builds the wheel and sdist, smoke-tests the wheel, attests build provenance, drafts the GitHub Release, publishes to PyPI through trusted publishing (environment `pypi`, no stored token), publishes the release, and checks PyPI serves the new version. Changes to either workflow are CI work: do not touch them for anything else.
 
 The lint step will fail the whole run on any finding, since `ruff check .` has no `--exit-zero` - a change that reintroduces a bare `except Exception:` or similar fails CI, not just a local check. See the "Linting" section above for what's actually selected and why.
+
+## Contribution Rules
+
+These mirror [CONTRIBUTING.md](CONTRIBUTING.md); keep the two in step.
+
+- A human reviews everything before it is submitted. Do not open pull requests, post issue comments, or reply in review threads on your own; prepare the change and let the person you are working for review and submit it.
+- New features, new public API, new options, and behavior changes need an issue labeled `accepted` before a pull request is opened. If there is none, stop and tell the person you are working for.
+- A contributor has at most 3 open pull requests. Check first: `gh pr list --author @me --state open`. Extra work stays in draft pull requests.
+- One fix or feature per change. Do not mix refactors or formatting into unrelated work.
+- Do not change version numbers or create tags unless the maintainer asks; releases are made by the maintainer.
+- Run `ruff check .` and `pytest` before calling a change complete.

@@ -1,0 +1,40 @@
+name: Feature proposal
+description: Propose a new feature or a change to existing behavior. A maintainer labels it `accepted` before a pull request is opened.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Features start here so the scope is agreed before anyone writes code. Please wait for the `accepted` label before opening a pull request.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the situation where the current behavior falls short.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: What would change, and how would someone use it?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to implement this myself once it is accepted.
+          required: false
+  - type: checkboxes
+    id: human-review
+    attributes:
+      label: Human review
+      options:
+        - label: I have personally reviewed and submitted this proposal. It is not an unattended AI-generated submission.
+          required: true

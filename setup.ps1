@@ -18,7 +18,7 @@ Write-Host ""
 Write-Host "[1/3] Checking Python installation..." -ForegroundColor Yellow
 $pythonVersion = python --version 2>&1
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "X Python not found! Install Python 3.7+ from https://python.org" -ForegroundColor Red
+    Write-Host "X Python not found! Install Python 3.9+ from https://python.org" -ForegroundColor Red
     exit 1
 }
 Write-Host "  Python found: $pythonVersion" -ForegroundColor Green

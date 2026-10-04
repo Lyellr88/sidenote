@@ -37,7 +37,7 @@ sidenote/
     storage.py            # Load / migrate / atomically save todos
     lockfile.py           # PID-based single-instance lock
   tests/                  # pytest suite
-  .github/workflows/      # CI: test, build, and publish on push to master
+  .github/workflows/      # ci.yml (lint + test on PRs), release.yml (publish on a version tag)
   pyproject.toml          # Package config
   README.md               # User guide
   DOCS.md                 # FAQ, troubleshooting, internals
@@ -103,26 +103,46 @@ Before submitting a PR:
 3. Make focused changes (one fix/feature per PR)
 4. Test manually
 5. Update README for user-facing changes
-6. Open a PR with a clear description
+6. Open a PR with a clear description and fill in the template. CI (`ruff check .` and `pytest` on Python 3.9 and 3.13) must pass before it can be merged.
+
+### Proposing Features
+
+New features, new options, and changes to default behavior start as an issue. Describe the problem and the approach you have in mind, then wait for the maintainer to label it `accepted` before opening a PR, and link that issue from the PR. Bug fixes, test fixes, and documentation corrections can go straight to a PR.
+
+### Open Pull Request Limit
+
+Please keep at most 3 PRs open at a time. Once 3 are open, keep further work on a branch or in a draft PR until one is merged or closed. Drafts don't count and aren't reviewed until marked ready. There is one maintainer, and this keeps every PR getting a careful review. It's a written policy, not an automated check.
+
+### AI-Assisted Contributions
+
+AI coding tools are welcome for writing code and drafting reviews. You are responsible for everything you submit: review the code and the PR description yourself and submit it yourself, and confirm that in the PR or issue template. Automated bot-to-bot conversation on issues and PRs isn't allowed. Coding agents working in this repo should read [AGENTS.md](AGENTS.md), which carries the same rules.
+
+### Labels and Release Notes
+
+Release notes are generated from PR labels (`.github/release.yml`). The maintainer labels PRs at merge time: `bug`, `enhancement`, `documentation`, `performance`, `security`, `breaking`, `ci`, `chore`, or `dependencies`. `skip-changelog` leaves a PR out of the notes.
+
+By participating you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Publishing (Maintainers Only)
 
-`.github/workflows/ci.yml` lints (`ruff check .`) and tests every push to `master`, then builds and publishes to PyPI automatically once a `PYPI_API_TOKEN` repository secret is set. It uses `--skip-existing`, so a push that didn't bump the version just skips the publish step rather than failing - bump the version to actually ship a release. A lint or test failure blocks the publish step entirely.
+Merging to `master` does not publish. A release happens when a version tag is pushed, and `.github/workflows/release.yml` does the rest: it checks the tag against the version in `pyproject.toml` and `sidenote/__init__.py`, builds the wheel and sdist, attests build provenance, creates a draft GitHub Release with generated notes, publishes to PyPI through trusted publishing (no stored token), publishes the release, and confirms PyPI serves the new version.
 
-The manual equivalent, useful before that secret exists or to publish outside of a push to `master`:
+To release:
 
 ```powershell
-# Bump version in pyproject.toml and sidenote/__init__.py
-pytest              # must be green before publishing
+# 1. In a PR: bump the version in pyproject.toml AND sidenote/__init__.py,
+#    move the CHANGELOG.md [Unreleased] notes under the new version. Merge it.
+git checkout master; git pull
+ruff check .; pytest              # both green
 
-# Clear dist/ first. Bumping the version does not rebuild, so a leftover
-# artifact gets uploaded instead - or collides with its published twin and
-# fails the whole command.
-Remove-Item -Recurse -Force dist, build, *.egg-info -ErrorAction SilentlyContinue
-python -m build
-twine check dist/*
-twine upload dist/*
+# 2. Tag the merged commit and push only the tag
+git tag -a v1.5.0 -m "Release v1.5.0"
+git push origin v1.5.0
 ```
+
+A release candidate works the same way with a tag like `v1.5.0-rc.1`; the manifests then say `1.5.0rc1` (PEP 440), and the GitHub Release is marked as a pre-release. Registries never accept a version number twice, so if a release goes wrong, fix forward with the next patch version.
+
+Publishing needs the trusted publisher configured once on PyPI (owner `Lyellr88`, repository `sidenote`, workflow `release.yml`, environment `pypi`). There is no `PYPI_API_TOKEN` any more. If trusted publishing is unavailable, a manual upload (`python -m build`, `twine check dist/*`, `twine upload dist/*`) needs a new PyPI API token created for that purpose; the old repository token is revoked and the CI no longer reads it.
 
 ## Questions or Ideas
 
