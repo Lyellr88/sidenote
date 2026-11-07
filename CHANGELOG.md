@@ -4,6 +4,10 @@ All notable changes to Sidenote are documented here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Fixed
+
+- `init` now adds the installed launcher directory to the user PATH before PowerShell setup, preserving existing entries and avoiding duplicates. First-time setup can run as `python -m sidenote.cli init` when PowerShell cannot find `sidenote` yet. Virtual environments continue using activation.
+
 ## [1.4.1] - 2026-10-04
 
 ### Changed

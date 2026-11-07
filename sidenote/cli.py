@@ -216,13 +216,21 @@ function stop-note  {{ sidenote stop }}
 
 
 def init():
-    """Add PowerShell helper functions to the user's profile.
+    """Set up user PATH and PowerShell helper functions.
 
     These have to be functions, not aliases: PowerShell's Set-Alias cannot carry
     arguments, so aliasing stop-note to `sidenote` made it *start* the overlay.
     """
     _require_windows()
 
+    from ._setup import ensure_user_path
+
+    try:
+        _say(ensure_user_path())
+    except OSError as exc:
+        _say(f"Could not set up command discovery: {exc}")
+        sys.exit(1)
+    _say("Close all terminal windows and reopen before using sidenote.")
     _say("Setting up PowerShell integration...")
 
     profile_paths = [
@@ -272,7 +280,7 @@ COMMANDS = [
     ("stop", "Stop the overlay"),
     ("status", "Show whether the overlay is running, with its PID"),
     ("upgrade", "Update to the newest release from PyPI"),
-    ("init", "Add start-note / stop-note shortcuts to PowerShell"),
+    ("init", "Set up PATH and PowerShell shortcuts"),
 ]
 
 OPTIONS = [

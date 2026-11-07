@@ -27,6 +27,7 @@ sidenote/
     __main__.py           # Enables `pythonw -m sidenote`
     cli.py                # Command entry point (start/stop/status/upgrade/init)
     _upgrade.py           # Detached helper for `sidenote upgrade`
+    _setup.py             # Launcher discovery and init user PATH setup
     terminal_overlay.py   # TerminalOverlay: setup, lifecycle, entry-field state machine
     overlay_ui.py          # Widget construction, help panel, tooltips, confirm popup
     overlay_positioning.py # Terminal tracking, following, and the lock
@@ -72,7 +73,7 @@ Before submitting a PR:
 
 - ✅ `sidenote` starts the overlay, `sidenote status` reports it
 - ✅ `sidenote stop` stops it - and leaves your other Python processes alone
-- ✅ `sidenote init` adds working PowerShell functions
+- ✅ `python -m sidenote.cli init` works with Scripts missing from PATH, preserves existing user PATH entries on repeated runs, and adds PowerShell functions; after reopening the terminal, `sidenote` works
 - ✅ Overlay sits flush against the terminal, matching its height
 - ✅ `Shift+Tab` toggles visibility
 - ✅ Double-click checks a todo off; `Ctrl+Delete` clears completed ones

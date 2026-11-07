@@ -3,7 +3,7 @@
 # Installs the package (which pulls its own dependencies from pyproject.toml)
 # and adds the PowerShell helper functions. If you installed from PyPI with
 # `pip install sidenote`, you don't need this script at all - just run
-# `sidenote init`.
+# `python -m sidenote.cli init`.
 
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host "   Sidenote - Setup" -ForegroundColor Cyan
@@ -44,7 +44,11 @@ Write-Host "  Package installed" -ForegroundColor Green
 # copy of the profile block here that could drift out of sync.
 Write-Host ""
 Write-Host "[3/3] Adding PowerShell commands..." -ForegroundColor Yellow
-sidenote init
+python -m sidenote.cli init
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "X Setup failed." -ForegroundColor Red
+    exit 1
+}
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan

@@ -19,6 +19,7 @@ Sidenote is a Python-based terminal overlay for Windows: a todo list that attach
 - `sidenote/lockfile.py` - PID-based single-instance lock
 - `sidenote/cli.py` - Entry point for `sidenote` (start/stop/status/upgrade/init)
 - `sidenote/_upgrade.py` - Detached helper process for `sidenote upgrade`
+- `sidenote/_setup.py` - Launcher discovery and user PATH setup for `init`
 - `sidenote/__main__.py` - Enables `pythonw -m sidenote`
 - `sidenote/__init__.py` - Package metadata
 - `pyproject.toml` - Package configuration for PyPI
@@ -91,6 +92,9 @@ Never kill by image name. `taskkill /F /IM python.exe` killed every Python proce
 
 **Console Output:**
 Route CLI prints through `cli._say()`. Bare `print("✓")` raises `UnicodeEncodeError` under cp1252, still the default in cmd.exe.
+
+**Command Discovery:**
+`python -m sidenote.cli init` runs setup without requiring the Scripts directory on PATH. Init locates the installed launcher, appends its directory to the user PATH without copying the merged process PATH or rewriting existing entries, and notifies Windows. Preserve the registry string type and avoid duplicate entries. Virtual environments rely on activation instead. Existing parent shells retain their old PATH; tell users to close all terminal windows and reopen. Tests must isolate registry writes and profile edits.
 
 **Self-Upgrade:**
 `cli.upgrade()` must never run pip in-process. Windows locks a running `.exe` against overwrite *and* rename (verified: `WinError 32` for both), so pip cannot replace `Scripts/sidenote.exe` while `sidenote upgrade` is the running process. `sidenote/_upgrade.py` is spawned with `CREATE_NEW_CONSOLE`, waits on the parent PID via `WaitForSingleObject`, and only then runs pip. That helper may import stdlib only, all at module level - pip is rewriting this package's files while it runs, so a lazy import could load a half-written module. Editable installs are refused, since upgrading them from PyPI would replace the user's working copy.
