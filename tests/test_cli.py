@@ -399,6 +399,7 @@ def test_main_dispatches_to_the_right_command(argument, expected, monkeypatch):
 
 
 def _profile(tmp_path, monkeypatch):
+    monkeypatch.setattr("sidenote._setup.ensure_user_path", lambda: "PATH ready")
     home = tmp_path / "home"
     (home / "Documents" / "PowerShell").mkdir(parents=True)
     monkeypatch.setattr(cli.Path, "home", classmethod(lambda cls: home))

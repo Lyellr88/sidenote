@@ -50,15 +50,19 @@ This isn't about rich features but simplicity. It's about **zero-friction captur
 ## Install
 
 ```powershell
-pip install sidenote
-sidenote init
+python -m pip install sidenote
+python -m sidenote.cli init
+```
+
+Close all terminal windows and reopen PowerShell, then run:
+
+```powershell
 sidenote  
 ```
 
 That's it - `Shift+Tab` toggles it from anywhere.
 
-Optionally, `sidenote init` adds `start-note` / `stop-note` shortcuts to your
-PowerShell profile.
+Setup adds the installed Scripts folder to your user PATH and adds `start-note` / `stop-note` shortcuts to your PowerShell profile. If `sidenote` already works, `sidenote init` runs the same setup.
 
 > If `sidenote` isn't found after installing, your Python Scripts folder isn't on
 > PATH - see [Troubleshooting](https://github.com/lyellr88/sidenote/blob/master/DOCS.md#troubleshooting).
@@ -110,7 +114,7 @@ The `?` button lists every action, so there's nothing to memorise.
 | `sidenote --version` | Print the version (`-V` works too) |
 | `sidenote --help` | List every command (`-h` works too) |
 | `sidenote upgrade` | Update to the newest release |
-| `sidenote init` | Add PowerShell shortcuts |
+| `sidenote init` | Set up PATH and PowerShell shortcuts |
 
 `sidenote stop` only ever terminates its own process - your dev servers,
 notebooks, and training runs are never touched.

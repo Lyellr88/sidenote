@@ -79,26 +79,17 @@ Because it was built in an hour to solve one person's problem, and tkinter ships
 
 **`sidenote` command not found after installation**
 
-Your Python Scripts folder isn't on PATH. Find it:
+Run the existing setup through the Python used to install Sidenote, so it does not depend on finding `sidenote.exe` on PATH:
 
 ```powershell
-python -c "import site; print(site.USER_BASE + '\\Scripts')"
+python -m sidenote.cli init
 ```
 
-Then add it to your user PATH:
+Setup locates the installed launcher, adds its Scripts directory to your user PATH if missing, and continues with PowerShell shortcut setup. It preserves existing PATH entries and does not copy the merged machine/process PATH into user settings. Virtual environments should stay activated instead of being added permanently to PATH.
 
-```powershell
-$scripts = python -c "import site; print(site.USER_BASE + '\\Scripts')"
-$user = [Environment]::GetEnvironmentVariable('PATH','User')
-[Environment]::SetEnvironmentVariable('PATH', "$user;$scripts", 'User')
-```
+Close all terminal windows, reopen PowerShell, and run `sidenote`. Existing shells keep their inherited PATH; reloading `$PROFILE` alone does not refresh it. If Windows did not receive the environment-change notification, sign out and back in.
 
-Close and reopen your terminal afterwards.
-
-> Read the `User` scope as shown above rather than using `setx PATH "$env:PATH;..."`.
-> `$env:PATH` is the *merged* system and user PATH, so that form permanently
-> copies your entire system PATH into your user PATH, and `setx` truncates
-> anything past 1024 characters.
+If Python says `No module named sidenote`, it is a different Python from the one used by pip. Install and initialize with the same interpreter: `python -m pip install sidenote`, then `python -m sidenote.cli init`. You can replace `python` with the full interpreter path shown by pip. This module form runs the same `init` command; it is not an additional subcommand.
 
 **`start-note` / `stop-note` not found**
 
@@ -249,7 +240,7 @@ function start-note { sidenote }
 function stop-note  { sidenote stop }
 ```
 
-Nothing else is written anywhere - no registry keys, no scheduled tasks, no files outside your home directory. If you added a Startup-folder shortcut, remove that too.
+`init` also adds Python's Scripts directory to your user PATH in `HKEY_CURRENT_USER\Environment`. Uninstalling leaves that shared directory on PATH because other installed Python commands may use it. Remove the entry through Windows' user environment-variable settings only if you no longer need that Scripts directory. No scheduled tasks are created. If you added a Startup-folder shortcut, remove that too.
 
 ---
 
